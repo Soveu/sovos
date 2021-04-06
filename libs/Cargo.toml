@@ -1,0 +1,10 @@
+[workspace]
+members = [
+  "cpu",
+  "mailbox",
+  "bootinfo",
+  "elf",
+]
+
+[profile.release]
+debug = true
