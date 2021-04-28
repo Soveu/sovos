@@ -58,3 +58,67 @@ pub struct IDTR {
     pub address: *const IDT,
 }
 
+#[repr(C)]
+pub struct InterruptInfo {
+    pub registers: [u64; 9],
+
+    pub has_error_code: u64,
+    pub error_code: u64,
+    pub instruction_pointer: u64,
+    pub code_segment: u64,
+    pub flags: u64,
+    pub stack_pointer: u64,
+    pub stack_segment: u64,
+}
+
+pub type InterruptFunc = unsafe extern "cdecl" fn(InterruptInfo);
+
+#[naked]
+pub unsafe extern "C" fn interrupt_handler_wrapper() {
+    asm!("
+            cld
+            test sp, 16
+            jz no_error_code
+
+            push 1
+            jmp continue_to_handler
+
+        no_error_code:
+            push 0
+            push 0
+
+        continue_to_handler:
+            push rax
+            push rdi
+            push rsi
+
+            push rdx
+            push rcx
+            push r8
+
+            push r9
+            push r10
+            push r11
+
+            call {}
+
+            pop r11
+            pop r10
+            pop r9
+
+            pop r8
+            pop rcx
+            pop rdx
+
+            pop rsi
+            pop rdi
+            pop rax
+
+            iretq",
+        sym actual_handler,
+        options(noreturn),
+    );
+
+    extern "C" fn actual_handler(info: InterruptInfo) {}
+}
+

@@ -77,6 +77,7 @@ impl Header {
             40  => Machine::Arm,
             3   => Machine::X86,
             62  => Machine::X64,
+            183 => Machine::AArch64,
             224 => Machine::AmdGpu,
             243 => Machine::RiscV,
             _ => return None,
@@ -155,6 +156,44 @@ impl core::fmt::Debug for ProgramHeader {
     }
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SectionHeader {
+    pub sh_name: u32,
+    pub sh_type: u32,
+
+    pub sh_flags: u64,
+    pub sh_addr: u64,
+    pub sh_offset: u64,
+    pub sh_size: u64,
+
+    pub sh_link: u32,
+    pub sh_info: u32,
+    pub sh_addralign: u64,
+    pub sh_entsize: u64,
+}
+
+pub enum SectionType {
+    Null = 0,
+    Progbits,
+    Symtab,
+    Strtab,
+    Rela,
+    Hash,
+    Dynamic,
+    Note,
+    Nobits,
+    Rel = 9,
+
+    Dynsym = 11,
+
+    InitArray = 14,
+    FiniArray,
+    PreinitArray,
+    Group,
+    SymtabShIndex = 18,
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 pub enum Class {
@@ -212,6 +251,7 @@ pub enum Machine {
     Arm = 40,
     X86 = 3,
     X64 = 62,
+    AArch64 = 183,
     AmdGpu = 224,
     RiscV = 243,
 }
@@ -219,7 +259,7 @@ pub enum Machine {
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 pub enum OsAbi {
-    SystemV = 0,         /* UNIX System V ABI */
+    SystemV = 0,      /* UNIX System V ABI */
     Hpux = 1,         /* HP-UX */
     NetBSD = 2,       /* NetBSD.  */
     GnuLinux = 3,     /* Object uses GNU ELF extensions.  */

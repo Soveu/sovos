@@ -1,5 +1,6 @@
 use super::Ring;
 use core::convert::TryInto;
+use core::ptr;
 
 pub enum TableIndicator {
     GDT = 0,
@@ -55,6 +56,11 @@ pub struct TrapGate(u128);
 #[derive(Clone, Copy)]
 pub struct InterruptGate(u128);
 
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct NullDescriptor(u128);
+
+/*
 pub enum SegmentDescriptorEnum {
     Data(DataSegmentDescriptor),
     Code(CodeSegmentDescriptor),
@@ -102,6 +108,7 @@ impl SegmentDescriptor {
         }
     }
 }
+*/
 
 /*
 pub struct SegmentDescriptor(u32, u32, u32, u32);
@@ -174,10 +181,34 @@ impl SegmentDescriptor {
 #[repr(C, packed)]
 pub struct GDTR {
     limit: u16,
-    base: u64,
+    base: *const u64,
 }
 
 impl GDTR {
+    pub fn read() -> Self {
+        let mut gdtr = Self { limit: 0, base: ptr::null() };
+        unsafe {
+            asm!("sgdt [{}]", in(reg) &mut gdtr, options(nostack));
+        }
+        return gdtr;
+    }
+
+    pub fn as_slice(&self) -> &[[u16; 4]] {
+        let limit = ptr::addr_of!(self.limit);
+        let base = ptr::addr_of!(self.base);
+        return unsafe {
+            let limit = ptr::read_unaligned(limit) as usize;
+            let base = ptr::read_unaligned(base);
+
+            let limit = limit + 1;
+            assert!(limit % 8 == 0);
+            assert!(base != ptr::null());
+            let limit = limit / 8;
+
+            core::slice::from_raw_parts(base as *const _, limit)
+        };
+    }
+    /*
     pub fn new(table: &[SegmentDescriptor]) -> Self {
         assert!(
             table.len() >= 3,
@@ -192,4 +223,5 @@ impl GDTR {
             limit,
         }
     }
+    */
 }

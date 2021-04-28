@@ -36,6 +36,9 @@
   "needs-plt": false,
 
   "pre-link-args": {
-    "ld.lld": ["--script=linker.ld"]
+    "ld.lld": [
+      "--script=linker.ld",
+      "-z", "nognustack"
+    ]
   }
 }

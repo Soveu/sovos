@@ -5,6 +5,7 @@
 #![feature(const_slice_from_raw_parts)]
 #![feature(const_mut_refs)]
 #![feature(const_trait_impl)]
+#![feature(naked_functions)]
 #![feature(rustc_attrs)]
 #![feature(slice_ptr_len)]
 

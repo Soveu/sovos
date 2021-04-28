@@ -62,6 +62,30 @@ fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
+    let gdtr = cpu::segmentation::GDTR::read();
+
+    let cs: u16;
+    let ds: u16;
+    let es: u16;
+    let fs: u16;
+    let gs: u16;
+    unsafe {
+        asm!("mov ax, cs", out("ax") cs, options(nostack, nomem));
+        asm!("mov ax, ds", out("ax") ds, options(nostack, nomem));
+        asm!("mov ax, es", out("ax") es, options(nostack, nomem));
+        asm!("mov ax, fs", out("ax") fs, options(nostack, nomem));
+        asm!("mov ax, gs", out("ax") gs, options(nostack, nomem));
+    }
+    brint!(out, "CS: {:?}\n", cs);
+    brint!(out, "DS: {:?}\n", ds);
+    brint!(out, "ES: {:?}\n", es);
+    brint!(out, "FS: {:?}\n", fs);
+    brint!(out, "GS: {:?}\n", gs);
+
+    brint!(out, "GDT:\n");
+    for e in gdtr.as_slice() {
+        brint!(out, "{:016b} {:016b} {:016b} {:016b}\n", e[0], e[1], e[2], e[3]);
+    }
 
     /*
     let boot = st.boot_services();
