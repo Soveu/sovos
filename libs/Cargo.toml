@@ -4,6 +4,7 @@ members = [
   "mailbox",
   "bootinfo",
   "elf",
+  "uefi",
 ]
 
 [profile.release]

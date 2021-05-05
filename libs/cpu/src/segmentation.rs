@@ -58,7 +58,7 @@ pub struct InterruptGate(u128);
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct NullDescriptor(u128);
+pub struct NullDescriptor(u64);
 
 /*
 pub enum SegmentDescriptorEnum {
@@ -173,15 +173,48 @@ impl SegmentDescriptor {
     pub const fn is_conforming(self) -> bool {
         (self.1 >> 10) & 1 == 1
     }
-
-
 }
 */
+
+#[repr(C)]
+pub struct GlobalDescriptorTable {
+    null: NullDescriptor,
+    code: CodeSegmentDescriptor,
+    data: DataSegmentDescriptor,
+}
+
+impl GlobalDescriptorTable {
+    pub const fn new() -> Self {
+        /* .. .. 10011011_00000000 00000000_1010_1111 */
+        /* 0x0020_9A00_0000_0000 */
+        let code: u64 = 0
+            | (1 << 40) // accessed
+            | (1 << 41) // read
+            | (0 << 42) // non-conforming
+            | (0b11 << 43) // must be set
+            | (0b00 << 45) // segment for kernel
+            | (1 << 47) // present
+            | (1 << 53); // long mode
+
+        /* Just present + data bit */
+        let data: u64 = 0
+            | (1 << 40) // accessed
+            | (1 << 41) // writable
+            | (1 << 44) // must be
+            | (1 << 47); // present
+
+        Self {
+            null: NullDescriptor(0u64),
+            code: CodeSegmentDescriptor(code),
+            data: DataSegmentDescriptor(data),
+        }
+    }
+}
 
 #[repr(C, packed)]
 pub struct GDTR {
     limit: u16,
-    base: *const u64,
+    base: *const GlobalDescriptorTable,
 }
 
 impl GDTR {
@@ -208,20 +241,37 @@ impl GDTR {
             core::slice::from_raw_parts(base as *const _, limit)
         };
     }
-    /*
-    pub fn new(table: &[SegmentDescriptor]) -> Self {
-        assert!(
-            table.len() >= 3,
-            "There must be null, code and data descriptors"
-        );
-
-        let limit: usize = table.len() * 8 - 1;
-        let limit: u16 = limit.try_into().unwrap();
+    pub fn new(table: &GlobalDescriptorTable) -> Self {
+        let limit: usize = core::mem::size_of::<GlobalDescriptorTable>() - 1;
+        let limit = limit as u16;
 
         Self {
-            base: table.as_ptr() as u64,
+            base: table,
             limit,
         }
+    }
+
+    /*
+    #[naked]
+    pub unsafe extern "C" fn apply(&self) {
+        asm!("
+            lgdt [rdi]
+
+            mov ax, 16
+            mov ds, ax
+
+            mov ax, 0
+            mov es, ax
+            mov fs, ax
+            mov gs, ax
+
+            pop rax
+            push word ptr 8
+            push rax
+            retf
+            ",
+            options(noreturn),
+        )
     }
     */
 }

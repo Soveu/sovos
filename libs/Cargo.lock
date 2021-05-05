@@ -33,7 +33,7 @@ dependencies = [
  "arrayvec",
  "cpu",
  "uart_16550",
- "uefi",
+ "uefi 0.8.0",
 ]
 
 [[package]]
@@ -128,6 +128,10 @@ checksum = "bad643914094137d475641b6bab89462505316ec2ce70907ad20102d28a79ab8"
 dependencies = [
  "bit_field 0.10.1",
 ]
+
+[[package]]
+name = "uefi"
+version = "0.1.0"
 
 [[package]]
 name = "uefi"

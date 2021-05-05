@@ -52,16 +52,34 @@ impl Entry {
 
 pub type IDT = [Entry; 256];
 
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct IDTR {
     pub limit: u16,
     pub address: *const IDT,
 }
 
 #[repr(C)]
-pub struct InterruptInfo {
-    pub registers: [u64; 9],
+pub struct SavedRegisters {
+    /* 14 registers */
+    pub rax: u64,
+    pub rbx: u64,
+    pub rcx: u64,
+    pub rdx: u64,
+    pub rdi: u64,
+    pub rsi: u64,
+    pub rbp: u64,
+    pub r9:  u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
+}
 
+#[repr(C)]
+pub struct InterruptInfo {
+    pub registers: SavedRegisters,
     pub has_error_code: u64,
     pub error_code: u64,
     pub instruction_pointer: u64,
@@ -70,8 +88,6 @@ pub struct InterruptInfo {
     pub stack_pointer: u64,
     pub stack_segment: u64,
 }
-
-pub type InterruptFunc = unsafe extern "cdecl" fn(InterruptInfo);
 
 #[naked]
 pub unsafe extern "C" fn interrupt_handler_wrapper() {
@@ -88,37 +104,47 @@ pub unsafe extern "C" fn interrupt_handler_wrapper() {
             push 0
 
         continue_to_handler:
-            push rax
-            push rdi
-            push rsi
+            sub rsp, 112
 
-            push rdx
-            push rcx
-            push r8
+            mov rax, [rsp - 0]
+            mov rbx, [rsp - 8]
+            mov rcx, [rsp - 16]
+            mov rdx, [rsp - 24]
+            mov rdi, [rsp - 32]
+            mov rsi, [rsp - 40]
+            mov rbp, [rsp - 48]
+            mov r9,  [rsp - 56]
+            mov r10, [rsp - 64]
+            mov r11, [rsp - 72]
+            mov r12, [rsp - 80]
+            mov r13, [rsp - 88]
+            mov r14, [rsp - 96]
+            mov r15, [rsp - 104]
 
-            push r9
-            push r10
-            push r11
-
+            mov rdi, rsp
             call {}
 
-            pop r11
-            pop r10
-            pop r9
+            mov [rsp - 0x00], rax
+            mov [rsp - 0x08], rbx
+            mov [rsp - 0x10], rcx
+            mov [rsp - 0x18], rdx
+            mov [rsp - 0x20], rdi
+            mov [rsp - 0x28], rsi
+            mov [rsp - 0x30], rbp
+            mov [rsp - 0x38], r9
+            mov [rsp - 0x40], r10
+            mov [rsp - 0x48], r11
+            mov [rsp - 0x50], r12
+            mov [rsp - 0x58], r13
+            mov [rsp - 0x60], r14
+            mov [rsp - 0x68], r15
 
-            pop r8
-            pop rcx
-            pop rdx
-
-            pop rsi
-            pop rdi
-            pop rax
-
+            add rsp, 128
             iretq",
         sym actual_handler,
         options(noreturn),
     );
 
-    extern "C" fn actual_handler(info: InterruptInfo) {}
+    extern "C" fn actual_handler(info: &mut InterruptInfo) {}
 }
 

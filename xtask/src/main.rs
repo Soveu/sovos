@@ -91,7 +91,10 @@ fn run(current_dir: PathBuf) -> Return {
         "-enable-kvm",
         "-cpu", "host",
         "-m", "8G",
-        "-nographic"
+        "-nographic",
+        "-d", "int,cpu_reset,guest_errors",
+        "-no-reboot",
+        //"-s", "-S",
     ];
     let mut qemu = Command::new("qemu-system-x86_64");
     qemu.args(&qemu_args);

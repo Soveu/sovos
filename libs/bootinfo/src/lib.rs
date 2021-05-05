@@ -2,7 +2,7 @@
 
 use arrayvec::ArrayVec;
 use cpu::paging::{self, PML4Entry, PDPEntry, PDEntry, PTEntry};
-use cpu::{PhysAddr, PhysSlice, paging::Megapage};
+use cpu::{PhysAddr, PhysSlice, paging::Megapage, segmentation::GlobalDescriptorTable};
 use uefi::table::{Runtime, boot::MemoryDescriptor};
 use uefi::prelude::*;
 use uart_16550::SerialPort;
@@ -13,6 +13,7 @@ pub struct Bootinfo {
     pub pdp: paging::Table<PDPEntry>,
     pub pd: paging::Table<PDEntry>,
     pub page_table: paging::Table<PTEntry>,
+    pub gdt: GlobalDescriptorTable,
 
     pub this: PhysAddr<Bootinfo>,
     pub kernel_pslice: PhysSlice<u8>,
@@ -30,6 +31,7 @@ impl Bootinfo {
             pdp:            paging::Table::new(),
             pd:             paging::Table::new(),
             page_table:     paging::Table::new(),
+            gdt:            GlobalDescriptorTable::new(),
 
             this:           PhysAddr::null(),
             kernel_pslice:  PhysSlice::null(),

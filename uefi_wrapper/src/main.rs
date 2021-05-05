@@ -5,6 +5,7 @@
 #![feature(asm)]
 #![feature(panic_info_message)]
 #![feature(slice_ptr_len)]
+#![feature(naked_functions)]
 
 use uefi::prelude::*;
 use uefi::table::boot::{MemoryType /*, MemoryDescriptor */};
@@ -13,11 +14,11 @@ use uefi::table::runtime::ResetType;
 use uart_16550::SerialPort;
 
 use elf::{Elf, self};
-use cpu::{self, paging::*};
+use cpu;
 use bootinfo::Bootinfo;
 
 use core::fmt::Write;
-use core::ptr;
+//use core::ptr;
 
 #[repr(align(2097152))]
 struct PageAligned<T: ?Sized>(T);
@@ -62,31 +63,6 @@ fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
-    let gdtr = cpu::segmentation::GDTR::read();
-
-    let cs: u16;
-    let ds: u16;
-    let es: u16;
-    let fs: u16;
-    let gs: u16;
-    unsafe {
-        asm!("mov ax, cs", out("ax") cs, options(nostack, nomem));
-        asm!("mov ax, ds", out("ax") ds, options(nostack, nomem));
-        asm!("mov ax, es", out("ax") es, options(nostack, nomem));
-        asm!("mov ax, fs", out("ax") fs, options(nostack, nomem));
-        asm!("mov ax, gs", out("ax") gs, options(nostack, nomem));
-    }
-    brint!(out, "CS: {:?}\n", cs);
-    brint!(out, "DS: {:?}\n", ds);
-    brint!(out, "ES: {:?}\n", es);
-    brint!(out, "FS: {:?}\n", fs);
-    brint!(out, "GS: {:?}\n", gs);
-
-    brint!(out, "GDT:\n");
-    for e in gdtr.as_slice() {
-        brint!(out, "{:016b} {:016b} {:016b} {:016b}\n", e[0], e[1], e[2], e[3]);
-    }
-
     /*
     let boot = st.boot_services();
     let (key, iter) = boot.memory_map(unsafe { &mut BUF })
@@ -143,9 +119,9 @@ fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
 
     brint!(out, "Remaining headers: {:#?}\n", pheaders);
 
-    /* Setup pages for kernel */
-    let root_table_index = (KERNEL_VIRT_ADDR >> 39) & 0b111111111;
-    let pdp_index = (KERNEL_VIRT_ADDR >> 30) & 0b111111111;
+    use cpu::segmentation::GDTR;
+    let gdtr = GDTR::new(&bootinfo.gdt);
+    unsafe { apply_gdtr(&gdtr); }
 
     /* SAFETY: none */
     let runtime = unsafe { systable_runtime.runtime_services() };
@@ -154,5 +130,29 @@ fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
         Status::SUCCESS,
         None
     );
+}
+
+#[naked]
+pub unsafe extern "C" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
+    asm!("
+        lgdt [rcx]
+
+        mov ax, 16
+        mov ds, ax
+        mov ss, ax
+
+        mov ax, 0
+        mov es, ax
+        mov fs, ax
+        mov gs, ax
+
+        pop rax
+        push qword ptr 8
+        push rax
+
+        retfq
+        ",
+        options(noreturn),
+    )
 }
 
