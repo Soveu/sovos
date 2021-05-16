@@ -92,7 +92,7 @@ fn run(current_dir: PathBuf) -> Return {
         "-cpu", "host",
         "-m", "8G",
         "-nographic",
-        "-d", "int,cpu_reset,guest_errors",
+        //"-d", "int,cpu_reset,guest_errors",
         "-no-reboot",
         //"-s", "-S",
     ];

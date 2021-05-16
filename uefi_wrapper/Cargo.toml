@@ -7,9 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = "0.8"
 uart_16550 = "0.2"
 
 cpu = { version = "*", path = "../libs/cpu" , features = ["ringzero"] }
 bootinfo = { version = "*", path = "../libs/bootinfo" }
 elf = { version = "*", path = "../libs/elf" }
+uefi = { version = "0.1", path = "../libs/uefi" }

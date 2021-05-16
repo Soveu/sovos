@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 arrayvec = { version = "0.5.2", features = ["unstable-const-fn"], default-features = false }
-uefi = "0.8"
 uart_16550 = "*"
+
 cpu = { path = "../cpu", version = "*" }
+uefi = { path = "../uefi", version = "*" }

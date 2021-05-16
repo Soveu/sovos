@@ -7,18 +7,16 @@
 #![feature(slice_ptr_len)]
 #![feature(naked_functions)]
 
-use uefi::prelude::*;
-use uefi::table::boot::{MemoryType /*, MemoryDescriptor */};
-use uefi::table::runtime::ResetType;
-
 use uart_16550::SerialPort;
 
 use elf::{Elf, self};
 use cpu;
 use bootinfo::Bootinfo;
+use uefi::{self, Verify};
 
 use core::fmt::Write;
-//use core::ptr;
+use core::ptr;
+use core::mem::MaybeUninit;
 
 #[repr(align(2097152))]
 struct PageAligned<T: ?Sized>(T);
@@ -26,6 +24,8 @@ struct PageAligned<T: ?Sized>(T);
 static KERNEL: &PageAligned<[u8]> = &PageAligned(*include_bytes!(env!("SOVOS_KERNEL_PATH")));
 static mut BOOTINFO: Bootinfo = Bootinfo::new();
 const KERNEL_VIRT_ADDR: u64 = 0xffff_ffff_c000_0000;
+
+//static mut BUF: [MaybeUninit<uefi::MemoryDescriptor>; 192] = [MaybeUninit::uninit(); 192];
 
 macro_rules! brint {
     ($($arg:tt)*) => {{
@@ -51,49 +51,41 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     }
 }
 
-#[entry]
-fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
+#[no_mangle]
+unsafe extern "efiapi" fn efi_main(handle: uefi::Handle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
     cpu::disable_interrupts();
 
+    let st = unsafe { &mut *st };
     let bootinfo = unsafe { &mut BOOTINFO };
     let mut out = unsafe { SerialPort::new(0x3F8) };
     out.init();
+
+    assert_eq!(st.verify(), Ok(()));
+    brint!(out, "Vendor: {:?}\n", st.vendor());
+
+    let boot_services = unsafe { &*st.boot_services };
+    //assert_eq!(boot_services.verify(), Ok(()));
+
+    let mut buf: [MaybeUninit<u64>; 1024] = MaybeUninit::uninit().assume_init();
+    let (memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
+
+    for map in memmap {
+        brint!(out, "\t{:?}\n", map);
+    }
 
     let cr4 = cpu::Cr4::get();
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
+
     /*
-    let boot = st.boot_services();
-    let (key, iter) = boot.memory_map(unsafe { &mut BUF })
-        .expect("one")
-        .expect("two");
-    */
-
-    let bootptr = bootinfo as *mut Bootinfo;
-    let (systable_runtime, iter) = st.exit_boot_services(handle, &mut bootinfo.buf)
-        .unwrap()
-        .unwrap();
-
-    let mut loader_code: *const [u8] = &[];
-
-    for desc in iter {
-        if desc.ty == MemoryType::LOADER_CODE {
-            loader_code = core::ptr::slice_from_raw_parts(
-                desc.phys_start as *const u8,
-                desc.page_count as usize * 4096,
-            );
-        }
-
-        bootinfo.uefi_meminfo.push(desc.clone());
-    }
-
     brint!(out, "\nptr = {:p}, len = {}\n", loader_code as *const u8, loader_code.len());
     brint!(out, "entries = {}\n", bootinfo.uefi_meminfo.len());
+    */
 
     let kernel = &KERNEL.0;
     brint!(out, "kernel: {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
-    brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
+    //brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
 
     let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(&KERNEL.0).unwrap();
     let pheaders = kernelelf.program_headers().unwrap();
@@ -123,17 +115,11 @@ fn efi_main(handle: Handle, st: SystemTable<Boot>) -> Status {
     let gdtr = GDTR::new(&bootinfo.gdt);
     unsafe { apply_gdtr(&gdtr); }
 
-    /* SAFETY: none */
-    let runtime = unsafe { systable_runtime.runtime_services() };
-    runtime.reset(
-        ResetType::Shutdown,
-        Status::SUCCESS,
-        None
-    );
+    loop { cpu::halt() };
 }
 
 #[naked]
-pub unsafe extern "C" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
+pub unsafe extern "win64" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
     asm!("
         lgdt [rcx]
 

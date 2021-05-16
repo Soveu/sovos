@@ -3,8 +3,7 @@
 use arrayvec::ArrayVec;
 use cpu::paging::{self, PML4Entry, PDPEntry, PDEntry, PTEntry};
 use cpu::{PhysAddr, PhysSlice, paging::Megapage, segmentation::GlobalDescriptorTable};
-use uefi::table::{Runtime, boot::MemoryDescriptor};
-use uefi::prelude::*;
+use uefi;
 use uart_16550::SerialPort;
 
 #[repr(C, align(4096))]
@@ -19,8 +18,8 @@ pub struct Bootinfo {
     pub kernel_pslice: PhysSlice<u8>,
 
     pub buf: [u8; 8192],
-    pub uefi_meminfo: ArrayVec<[MemoryDescriptor; 192]>,
-    pub uefi_systable: Option<SystemTable<Runtime>>,
+    pub uefi_meminfo: ArrayVec<[uefi::MemoryDescriptor; 192]>,
+    pub uefi_systable: *mut uefi::SystemTable,
     pub serial: Option<SerialPort>,
 }
 
@@ -38,11 +37,12 @@ impl Bootinfo {
 
             buf:            [0u8; 8192],
             uefi_meminfo:   ArrayVec::new(),
-            uefi_systable:  None,
+            uefi_systable:  core::ptr::null_mut(),
             serial:         None,
         }
     }
 
+    /*
     /// # Safety
     /// * Technically this struct is self-referential, 
     /// so we should use Pin, but for simplicity sake we don't.
@@ -69,4 +69,5 @@ impl Bootinfo {
         let page_fault_vector_number = 14;
         unreachable!();
     }
+    */
 }

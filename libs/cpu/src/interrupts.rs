@@ -1,4 +1,4 @@
-use crate::VirtAddr;
+//use crate::VirtAddr;
 
 #[repr(transparent)]
 pub struct Flags(u16);
@@ -145,6 +145,6 @@ pub unsafe extern "C" fn interrupt_handler_wrapper() {
         options(noreturn),
     );
 
-    extern "C" fn actual_handler(info: &mut InterruptInfo) {}
+    extern "C" fn actual_handler(_info: &mut InterruptInfo) {}
 }
 
