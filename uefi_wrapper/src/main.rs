@@ -15,7 +15,7 @@ use bootinfo::Bootinfo;
 use uefi::{self, Verify};
 
 use core::fmt::Write;
-use core::ptr;
+//use core::ptr;
 use core::mem::MaybeUninit;
 
 #[repr(align(2097152))]
@@ -52,7 +52,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
-unsafe extern "efiapi" fn efi_main(handle: uefi::Handle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
+extern "efiapi" fn efi_main(_handle: uefi::Handle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
     cpu::disable_interrupts();
 
     let st = unsafe { &mut *st };
@@ -66,8 +66,8 @@ unsafe extern "efiapi" fn efi_main(handle: uefi::Handle, st: *mut uefi::SystemTa
     let boot_services = unsafe { &*st.boot_services };
     //assert_eq!(boot_services.verify(), Ok(()));
 
-    let mut buf: [MaybeUninit<u64>; 1024] = MaybeUninit::uninit().assume_init();
-    let (memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
+    let mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
+    let (_memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
 
     for map in memmap {
         brint!(out, "\t{:?}\n", map);
