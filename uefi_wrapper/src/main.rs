@@ -52,7 +52,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
-extern "efiapi" fn efi_main(_handle: uefi::Handle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
+extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
     cpu::disable_interrupts();
 
     let st = unsafe { &mut *st };
@@ -67,7 +67,9 @@ extern "efiapi" fn efi_main(_handle: uefi::Handle, st: *mut uefi::SystemTable) -
     //assert_eq!(boot_services.verify(), Ok(()));
 
     let mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
-    let (_memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
+    let (memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
+    let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
+    assert_eq!(ok, Ok(()));
 
     for map in memmap {
         brint!(out, "\t{:?}\n", map);
@@ -119,9 +121,9 @@ extern "efiapi" fn efi_main(_handle: uefi::Handle, st: *mut uefi::SystemTable) -
 }
 
 #[naked]
-pub unsafe extern "win64" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
+pub unsafe extern "sysv64" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
     asm!("
-        lgdt [rcx]
+        lgdt [rdi]
 
         mov ax, 16
         mov ds, ax

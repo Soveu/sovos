@@ -5,6 +5,7 @@ members = [
   "bootinfo",
   "elf",
   "uefi",
+  "impl_bits",
 ]
 
 [profile.release]

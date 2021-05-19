@@ -71,8 +71,8 @@ pub struct BootServices {
     /// DescriptorSize to find the start of each EFI_MEMORY_DESCRIPTOR in the MemoryMap array.
     get_memory_map: Option<extern "efiapi" fn(
         &mut usize,
-        *mut MemoryDescriptor,
-        &mut MemoryMapKey,
+        *mut memory::Descriptor,
+        &mut memory::MapKey,
         &mut usize,
         &mut u32,
     ) -> RawStatus>,
@@ -130,7 +130,7 @@ pub struct BootServices {
     /// services during the first call to ExitBootServices().
     /// A UEFI OS loader should not make calls to any boot service function other 
     /// than GetMemoryMap() after the first call to ExitBootServices().
-    exit_boot_services: Option<extern "efiapi" fn(ImageHandle, MemoryMapKey) -> RawStatus>,
+    exit_boot_services: Option<extern "efiapi" fn(ImageHandle, memory::MapKey) -> RawStatus>,
 
     /*
     get_next_monotonic_count: usize,
@@ -159,16 +159,16 @@ impl BootServices {
     pub fn get_memory_map<'buf>(
         &self,
         buf: &'buf mut [MaybeUninit<u64>],
-    ) -> Result<(MemoryMapKey, MemoryDescriptorIterator), Error> {
+    ) -> Result<(memory::MapKey, memory::DescriptorIterator), Error> {
         let mut size: usize = core::mem::size_of_val(buf);
-        let mut key = MemoryMapKey(0xDEAD_BEEF);
+        let mut key = memory::MapKey(0xDEAD_BEEF);
         let mut descriptor_size = 0usize;
         let mut descriptor_version = 0u32;
 
         let get_memory_map = self.get_memory_map.expect("buggy UEFI: get_memory_map is null");
         let status = (get_memory_map)(
             &mut size,
-            buf.as_mut_ptr() as *mut MemoryDescriptor,
+            buf.as_mut_ptr() as *mut memory::Descriptor,
             &mut key,
             &mut descriptor_size,
             &mut descriptor_version,
@@ -177,7 +177,7 @@ impl BootServices {
         /*
         assert_eq!(
             descriptor_size,
-            core::mem::size_of::<MemoryDescriptor>(),
+            core::mem::size_of::<memory::Descriptor>(),
             "Memory descriptor size given by UEFI doesn't match MemoryDescriptor size",
         );
         */
@@ -195,7 +195,7 @@ impl BootServices {
         let init_buffer = init_buffer as *mut [u64];
 
         unsafe {
-            let iter = MemoryDescriptorIterator::new(&*init_buffer, descriptor_size);
+            let iter = memory::DescriptorIterator::new(&*init_buffer, descriptor_size);
             return Ok((key, iter));
         }
     }
@@ -203,7 +203,7 @@ impl BootServices {
     pub unsafe fn exit_boot_services(
         &self,
         handle: ImageHandle,
-        key: MemoryMapKey
+        key: memory::MapKey
     ) -> Result<(), Error> {
         let exit_bservices = self.exit_boot_services.expect("buggy UEFI: exit_boot_services is null");
         let status = (exit_bservices)(handle, key);

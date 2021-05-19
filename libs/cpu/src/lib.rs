@@ -12,6 +12,8 @@
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
 
+use impl_bits::impl_bits;
+
 #[macro_use]
 mod macros;
 
@@ -39,33 +41,35 @@ pub enum Ring {
     Three = 3,
 }
 
-#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Eflags(u32);
 
 impl_bits! {
-    struct Eflags(new = 2u32),
+    Eflags = {
+        carry = 0,
+        parity = 2,
+        adjust = 4,
+        zero = 6,
+        sign = 7,
 
-    carry = 0,
-    parity = 2,
-    adjust = 4,
-    zero = 6,
-    sign = 7,
+        trap = 8,
+        interrupt_enabled = 9,
+        direction = 10,
+        overflow = 11,
 
-    trap = 8,
-    interrupt_enabled = 9,
-    direction = 10,
-    overflow = 11,
-
-    nested_task = 14,
-    resume = 16,
-    alignment_check = 18,
-    virtual_interrupt = 19,
-    virtual_interrupt_pending = 20,
-    cpuid = 21,
+        nested_task = 14,
+        resume = 16,
+        alignment_check = 18,
+        virtual_interrupt = 19,
+        virtual_interrupt_pending = 20,
+        cpuid = 21,
+    }
 }
 
 impl Eflags {
+    pub const fn new() -> Self {
+        Self(2u32)
+    }
     pub fn io_privilege(self) -> Ring {
         match (self.0 >> 12) & 0b11 {
             0 => Ring::Zero,

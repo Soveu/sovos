@@ -10,7 +10,7 @@ mod guid;
 mod system_table;
 mod boot_services;
 mod runtime_services;
-mod memory;
+pub mod memory;
 
 pub use status::*;
 pub use header::*;
@@ -18,7 +18,7 @@ pub use guid::*;
 pub use system_table::*;
 pub use boot_services::*;
 pub use runtime_services::*;
-pub use memory::*;
+//pub use memory::*;
 
 pub const SPECIFICATION_VERSION: u32 = (2 << 16) | 80;
 
@@ -29,9 +29,6 @@ pub struct ImageHandle(Handle);
 
 #[repr(transparent)]
 pub struct Handle(usize);
-
-#[repr(transparent)]
-pub struct MemoryMapKey(u64);
 
 #[repr(C)]
 pub struct Config {

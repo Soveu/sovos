@@ -40,7 +40,7 @@ checksum = "bed57e2090563b83ba8f83366628ce535a7584c9afa4c9fc0612a03925c6df58"
 name = "cpu"
 version = "0.1.0"
 dependencies = [
- "paste",
+ "impl_bits",
 ]
 
 [[package]]
@@ -51,10 +51,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "impl_bits"
+version = "0.1.0"
+dependencies = [
+ "paste",
+]
+
+[[package]]
 name = "paste"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5d65c4d95931acda4498f675e332fcbdc9a06705cd07086c510e9b6009cd1c1"
+checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "uart_16550"
@@ -69,6 +76,9 @@ dependencies = [
 [[package]]
 name = "uefi"
 version = "0.1.0"
+dependencies = [
+ "impl_bits",
+]
 
 [[package]]
 name = "uefi_wrapper"

@@ -8,12 +8,12 @@ pub struct Page([u8; 4096]);
 #[repr(align(2097152))]
 pub struct Megapage([u8; 2097152]);
 
-pub trait Bits {
+pub trait Bits: Sized {
     unsafe fn from_u64_unchecked(x: u64) -> Self;
     fn as_u64(&self) -> u64;
 }
 
-pub trait Entry: Default + Bits {
+pub trait Entry: Bits {
     type Flags: Bits;
     const ZEROED: Self;
 
