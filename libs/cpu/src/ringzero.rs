@@ -159,41 +159,39 @@ pub fn invlpcid() {
 #[repr(transparent)]
 pub struct Cr4(u64);
 
-impl_bits! {
-    Cr4 = {
-        vme = 0,
-        pvi = 1,
-        time_stamp_disable = 2,
-        debug_extension = 3,
-        page_size_extensions = 4,
-        physical_address_extension = 5,
-        machine_check = 6,
-        page_global = 7,
-        perf_counter = 8,
-        os_fxsave_fxrstor = 9,
-        os_simd_float_exceptions = 10,
-        usermode_instruction_prevention = 11,
+impl_bits!(Cr4 = {
+    vme = 0,
+    pvi = 1,
+    time_stamp_disable = 2,
+    debug_extension = 3,
+    page_size_extensions = 4,
+    physical_address_extension = 5,
+    machine_check = 6,
+    page_global = 7,
+    perf_counter = 8,
+    os_fxsave_fxrstor = 9,
+    os_simd_float_exceptions = 10,
+    usermode_instruction_prevention = 11,
 
-        // Only in Intel manual
-        intel_vmx = 13,
-        intel_smx = 14,
+    // Only in Intel manual
+    intel_vmx = 13,
+    intel_smx = 14,
 
-        fsgsbase = 16,
-        process_context_id = 17,
-        os_xsave = 18,
+    fsgsbase = 16,
+    process_context_id = 17,
+    os_xsave = 18,
 
-        /// Doesn't allow kernel to exec usermode instructions
-        supervisormode_exec_prot = 20,
+    /// Doesn't allow kernel to exec usermode instructions
+    supervisormode_exec_prot = 20,
 
-        /// Doesn't allow kernel to access usermode memory if some stuff
-        /// isnt set up
-        supervisormode_access_prot = 21,
-        protection_key = 22,
+    /// Doesn't allow kernel to access usermode memory if some stuff
+    /// isnt set up
+    supervisormode_access_prot = 21,
+    protection_key = 22,
 
-        // For now only in AMD manual
-        control_flow_enforcement = 23,
-    }
-}
+    // For now only in AMD manual
+    control_flow_enforcement = 23,
+});
 
 impl Cr4 {
     pub fn get() -> Self {
@@ -222,25 +220,23 @@ impl Cr4 {
 #[repr(transparent)]
 pub struct Cr0(u64);
 
-impl_bits! {
-    Cr0 = {
-        protection_enable = 0,
-        monitor_coprocessor = 1,
-        emulation = 2,
-        task_switched = 3,
-        extension_type = 4,
-        numeric_error = 5,
+impl_bits!(Cr0 = {
+    protection_enable = 0,
+    monitor_coprocessor = 1,
+    emulation = 2,
+    task_switched = 3,
+    extension_type = 4,
+    numeric_error = 5,
 
-        /// Ring 0-2 normally can write to pages marked as non-writable
-        write_protect = 16,
+    /// Ring 0-2 normally can write to pages marked as non-writable
+    write_protect = 16,
 
-        alignment_check = 18,
+    alignment_check = 18,
 
-        not_write_through = 29,
-        cache_disable = 30,
-        paging = 31,
-    }
-}
+    not_write_through = 29,
+    cache_disable = 30,
+    paging = 31,
+});
 
 impl Cr0 {
     pub fn get() -> Self {

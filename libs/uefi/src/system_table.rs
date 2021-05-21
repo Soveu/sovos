@@ -1,7 +1,9 @@
 use super::*;
 
+use core::cell::Cell;
+
 impl Verify for SystemTable {
-    const REVISION: u32 = (2 << 16) | 70;
+    const REVISION: Revision = Revision::new(2, 70);
     const SIGNATURE: u64 = 0x5453595320494249;
     fn get_header(&self) -> &TableHeader {
         &self.header
@@ -22,28 +24,25 @@ pub struct SystemTable {
 
     /// The handle for the active console input device. This handle must support
     /// EFI_SIMPLE_TEXT_INPUT_PROTOCOL and EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL.
-    pub console_in_handle: Handle,
-    //con_in: *const SimpleTextInputProtocol,
-    pub con_in: usize,
+    pub console_in_handle: Cell<Handle>,
+    pub con_in: Cell<usize>,
 
     /// A pointer to the EFI_SIMPLE_TEXT_INPUT_PROTOCOL interface that is associated
     /// with ConsoleInHandle
-    pub console_out_handle: Handle,
-    //con_out: *const SimpleTextOutputProtocol,
-    pub con_out: usize,
+    pub console_out_handle: Cell<Handle>,
+    pub con_out: Cell<usize>,
 
     /// The handle for the active standard error console device. This handle must
     /// support the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
-    pub console_err_handle: Handle,
+    pub console_err_handle: Cell<Handle>,
     /// A pointer to the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL interface that is 
     /// associated with StandardErrorHandle.
-    //con_err: *const SimpleTextOutputProtocol,
-    pub con_err: usize,
+    pub con_err: Cell<usize>,
 
     /// A pointer to the EFI Runtime Services Table. See Section 4.5.
     pub runtime_services: *const RuntimeServices,
     /// A pointer to the EFI Boot Services Table. See Section 4.4.
-    pub boot_services: *const BootServices,
+    pub boot_services: Cell<*const BootServices>,
 
     /// The number of system configuration tables in the buffer ConfigurationTable.
     pub number_of_table_entries: u64,

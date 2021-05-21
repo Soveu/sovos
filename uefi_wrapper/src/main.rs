@@ -2,6 +2,7 @@
 #![no_main]
 
 #![feature(abi_efiapi)]
+#![feature(abi_x86_interrupt)]
 #![feature(asm)]
 #![feature(panic_info_message)]
 #![feature(slice_ptr_len)]
@@ -24,8 +25,6 @@ struct PageAligned<T: ?Sized>(T);
 static KERNEL: &PageAligned<[u8]> = &PageAligned(*include_bytes!(env!("SOVOS_KERNEL_PATH")));
 static mut BOOTINFO: Bootinfo = Bootinfo::new();
 const KERNEL_VIRT_ADDR: u64 = 0xffff_ffff_c000_0000;
-
-//static mut BUF: [MaybeUninit<uefi::MemoryDescriptor>; 192] = [MaybeUninit::uninit(); 192];
 
 macro_rules! brint {
     ($($arg:tt)*) => {{
@@ -52,26 +51,34 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
-extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
+extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTable) -> uefi::RawStatus {
     cpu::disable_interrupts();
 
-    let st = unsafe { &mut *st };
+    let st = unsafe { &*st };
     let bootinfo = unsafe { &mut BOOTINFO };
     let mut out = unsafe { SerialPort::new(0x3F8) };
+    let mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
     out.init();
 
     assert_eq!(st.verify(), Ok(()));
-    brint!(out, "Vendor: {:?}\n", st.vendor());
 
-    let boot_services = unsafe { &*st.boot_services };
+    let boot_services = unsafe { &*st.boot_services.get() };
     //assert_eq!(boot_services.verify(), Ok(()));
 
-    let mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
     let (memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
     let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
     assert_eq!(ok, Ok(()));
 
+    //brint!(out, "\n{:#?}\n", st.config_slice());
+
     for map in memmap {
+        use uefi::memory::Type;
+
+        let mtyp = Type::from_int(map.typ);
+        if mtyp == Some(Type::BootServicesCode) || mtyp == Some(Type::BootServicesData) {
+            continue;
+        }
+
         brint!(out, "\t{:?}\n", map);
     }
 
@@ -80,11 +87,31 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
 
-    /*
-    brint!(out, "\nptr = {:p}, len = {}\n", loader_code as *const u8, loader_code.len());
-    brint!(out, "entries = {}\n", bootinfo.uefi_meminfo.len());
-    */
+    use cpu::segmentation::GDTR;
+    let gdtr = GDTR::new(&bootinfo.gdt);
+    unsafe { gdtr.apply(); }
 
+    use cpu::interrupt;
+    extern "sysv64" fn _dummy_handler(ii: &mut interrupt::Stack) {
+        let mut out = unsafe { SerialPort::new(0x3F8) };
+        brint!(out, "\nHANDLER\n\n{:?}\n", ii);
+        loop { cpu::halt() };
+    }
+    let dummy_handler = interrupt::make_handler!(_dummy_handler);
+    let idt_flags = interrupt::Flags::new_interrupt()
+        .disable_interrupts()
+        .set_present();
+    let idt_entry = interrupt::Entry::with_handler_and_flags(dummy_handler, idt_flags);
+    bootinfo.idt = [idt_entry; 256];
+    let idtr = interrupt::TableRegister::new(&bootinfo.idt);
+    unsafe { idtr.apply(); }
+
+    prepare_kernel_elf(&mut out);
+
+    loop { cpu::halt() };
+}
+
+fn prepare_kernel_elf(out: &mut SerialPort) {
     let kernel = &KERNEL.0;
     brint!(out, "kernel: {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
     //brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
@@ -112,35 +139,5 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     assert_eq!(data_bss.p_align, 1 << 21);
 
     brint!(out, "Remaining headers: {:#?}\n", pheaders);
-
-    use cpu::segmentation::GDTR;
-    let gdtr = GDTR::new(&bootinfo.gdt);
-    unsafe { apply_gdtr(&gdtr); }
-
-    loop { cpu::halt() };
-}
-
-#[naked]
-pub unsafe extern "sysv64" fn apply_gdtr(_gdtr: &cpu::segmentation::GDTR) {
-    asm!("
-        lgdt [rdi]
-
-        mov ax, 16
-        mov ds, ax
-        mov ss, ax
-
-        mov ax, 0
-        mov es, ax
-        mov fs, ax
-        mov gs, ax
-
-        pop rax
-        push qword ptr 8
-        push rax
-
-        retfq
-        ",
-        options(noreturn),
-    )
 }
 

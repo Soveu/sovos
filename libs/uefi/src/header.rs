@@ -5,19 +5,7 @@ pub struct TableHeader {
     /// the EFI Boot Services Table, and the EFI Runtime Services Table.
     pub signature: u64,
 
-    /// The revision of the EFI Specification to which this table conforms.
-    /// The upper 16 bits of this field contain the major revision value,
-    /// and the lower 16 bits contain the minor revision value.
-    /// The minor revision values are binary coded decimals and are limited to the
-    /// range of 00..99.
-    /// When printed or displayed UEFI spec revision is referred as 
-    /// (Major revision).(Minor revision upper decimal).(Minor revision lower decimal) 
-    /// or (Major revision).(Minor revision upper decimal) in case Minor revision 
-    /// lower decimal is set to 0. 
-    /// For example:
-    /// A specification with the revision value ((2<<16) | (30)) would be referred as 2.3;
-    /// A specification with the revision value ((2<<16) | (31)) would be referred as 2.3.1
-    pub revision: u32,
+    pub revision: crate::Revision,
 
     /// The size, in bytes, of the entire table including the EFI_TABLE_HEADER.
     pub header_size: u32,
@@ -41,7 +29,7 @@ pub enum VerifyError {
 
 pub trait Verify: Sized {
     const SIGNATURE: u64;
-    const REVISION: u32 = super::SPECIFICATION_VERSION;
+    const REVISION: crate::Revision = crate::SPECIFICATION_VERSION;
 
     fn get_header(&self) -> &TableHeader;
 

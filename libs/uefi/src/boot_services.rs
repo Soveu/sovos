@@ -200,6 +200,13 @@ impl BootServices {
         }
     }
 
+    /// Terminates boot services.
+    /// On success, loader owns all avaliable memory in the system.
+    /// Additionally, all memory marked as `memory::Type::BootServicesCode` or
+    /// `memory::Type::BootServicesData` can be treated as free memory.
+    /// Several fields of the EFI System Table should be set to 0, like `console_in_handle`,
+    /// `con_in` and similar and also `boot_services`. Also, since the table is changed CRC
+    /// checksum must be recomputed.
     pub unsafe fn exit_boot_services(
         &self,
         handle: ImageHandle,

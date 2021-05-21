@@ -2,6 +2,8 @@
 pub struct RawStatus(pub usize);
 
 impl RawStatus {
+    pub const OK: Self = Self(0);
+
     pub fn get_efi_error(&self) -> Option<Error> {
         const EFI_ERROR_BEGIN: usize = 0x8000_0000_0000_0000 + Error::LoadError as usize;
         const EFI_ERROR_END: usize = EFI_ERROR_BEGIN + Error::HttpError as usize;

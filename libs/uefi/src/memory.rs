@@ -64,13 +64,25 @@ pub enum Type {
     BootServicesData,
     RuntimeServicesCode,
     RuntimeServicesData,
+
+    /// Free (unallocated) memory
     Conventional,
+
     Unusable,
+
+    /// Memory which holds ACPI tables
     AcpiReclaim,
+
+    /// Reserved for use by the firmware
     AcpiNVS,
+
     Mmio,
     MmioPortSpace,
+
+    /// Address space reserved by the firmware for code that is part of the processor.
     PalCode,
+
+    /// A memory region that operates as EfiConventionalMemory. However, it happens to also support byte-addressable non-volatility.
     Persistent,
 }
 
