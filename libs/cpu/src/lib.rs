@@ -1,17 +1,15 @@
 #![no_std]
-
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
 //#![feature(const_fn)]
 #![feature(const_fn_trait_bound)]
 #![feature(const_slice_from_raw_parts)]
 #![feature(const_mut_refs)]
-#![feature(const_trait_impl)]
+//#![feature(const_trait_impl)]
 #![feature(decl_macro)]
 #![feature(naked_functions)]
 #![feature(rustc_attrs)]
 #![feature(slice_ptr_len)]
-
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
 
@@ -20,10 +18,10 @@ use impl_bits::impl_bits;
 #[macro_use]
 mod macros;
 
+pub mod acpi;
+pub mod interrupt;
 pub mod paging;
 pub mod segmentation;
-pub mod interrupt;
-pub mod acpi;
 
 mod instructions;
 pub use instructions::*;
@@ -82,4 +80,3 @@ impl Eflags {
         }
     }
 }
-

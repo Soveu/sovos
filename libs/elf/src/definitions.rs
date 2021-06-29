@@ -28,25 +28,25 @@ pub struct HeaderIdent {
 impl HeaderIdent {
     pub fn os_abi(&self) -> Option<OsAbi> {
         let osabi = match self.ei_osabi {
-            0   => OsAbi::SystemV,
-            1   => OsAbi::Hpux,
-            2   => OsAbi::NetBSD,
-            3   => OsAbi::GnuLinux,
-            6   => OsAbi::Solaris,
-            7   => OsAbi::Aix,
-            8   => OsAbi::Irix,
-            9   => OsAbi::FreeBSD,
-            10  => OsAbi::Tru64,
-            11  => OsAbi::Modesto,
-            12  => OsAbi::OpenBSD,
-            64  => OsAbi::ArmAEABI,
-            97  => OsAbi::Arm,
+            0 => OsAbi::SystemV,
+            1 => OsAbi::Hpux,
+            2 => OsAbi::NetBSD,
+            3 => OsAbi::GnuLinux,
+            6 => OsAbi::Solaris,
+            7 => OsAbi::Aix,
+            8 => OsAbi::Irix,
+            9 => OsAbi::FreeBSD,
+            10 => OsAbi::Tru64,
+            11 => OsAbi::Modesto,
+            12 => OsAbi::OpenBSD,
+            64 => OsAbi::ArmAEABI,
+            97 => OsAbi::Arm,
             255 => OsAbi::Standalone,
             _ => return None,
         };
 
         return Some(osabi);
-   }
+    }
 }
 
 #[repr(C)]
@@ -71,12 +71,12 @@ pub struct Header {
 impl Header {
     pub fn machine(&self) -> Option<Machine> {
         let machine = match self.e_machine {
-            0   => Machine::None,
-            20  => Machine::PowerPC,
-            21  => Machine::Power64,
-            40  => Machine::Arm,
-            3   => Machine::X86,
-            62  => Machine::X64,
+            0 => Machine::None,
+            20 => Machine::PowerPC,
+            21 => Machine::Power64,
+            40 => Machine::Arm,
+            3 => Machine::X86,
+            62 => Machine::X64,
             183 => Machine::AArch64,
             224 => Machine::AmdGpu,
             243 => Machine::RiscV,

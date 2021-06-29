@@ -1,7 +1,7 @@
 #[repr(C)]
 pub struct TableHeader {
     /// A 64-bit signature that identifies the type of table that follows.
-    /// Unique signatures have been generated for the EFI System Table, 
+    /// Unique signatures have been generated for the EFI System Table,
     /// the EFI Boot Services Table, and the EFI Runtime Services Table.
     pub signature: u64,
 
@@ -10,7 +10,7 @@ pub struct TableHeader {
     /// The size, in bytes, of the entire table including the EFI_TABLE_HEADER.
     pub header_size: u32,
 
-    /// The 32-bit CRC for the entire table. This value is computed by setting 
+    /// The 32-bit CRC for the entire table. This value is computed by setting
     /// this field to 0, and computing the 32-bit CRC for HeaderSize bytes.
     /// Note: Unless otherwise specified, UEFI uses a standard CCITT32 CRC algorithm with a seed
     /// polynomial value of 0x04c11db7 for its CRC calculations.
@@ -57,4 +57,3 @@ pub trait Verify: Sized {
         return Ok(());
     }
 }
-

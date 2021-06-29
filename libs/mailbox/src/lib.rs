@@ -1,10 +1,10 @@
 #![no_std]
 #![allow(unused_unsafe)]
 
-use core::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
-use core::mem::MaybeUninit;
 use core::cell::UnsafeCell;
+use core::mem::MaybeUninit;
 use core::ptr;
+use core::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 
 struct MailboxBuffer<T, const N: usize> {
     buf: [UnsafeCell<MaybeUninit<T>>; N],
@@ -20,7 +20,7 @@ impl<T, const N: usize> MailboxBuffer<T, N> {
                 buf: MaybeUninit::uninit().assume_init(),
                 len: AtomicIsize::new(0),
             }
-        }
+        };
     }
 
     pub(crate) fn try_push(&self, item: T) -> Option<T> {
@@ -70,8 +70,8 @@ impl<T, const N: usize> MailboxBuffer<T, N> {
     }
 }
 
-unsafe impl <T: Send, const N: usize> Send for MailboxBuffer<T, N> {}
-unsafe impl <T: Sync, const N: usize> Sync for MailboxBuffer<T, N> {}
+unsafe impl<T: Send, const N: usize> Send for MailboxBuffer<T, N> {}
+unsafe impl<T: Sync, const N: usize> Sync for MailboxBuffer<T, N> {}
 
 pub struct Mailbox<T, const N: usize> {
     /* FIXME: lots of false sharing here */
@@ -86,12 +86,9 @@ impl<T, const N: usize> Mailbox<T, N> {
         Self {
             buffers: [
                 UnsafeCell::new(MailboxBuffer::new()),
-                UnsafeCell::new(MailboxBuffer::new())
+                UnsafeCell::new(MailboxBuffer::new()),
             ],
-            sender_count: [
-                AtomicUsize::new(0),
-                AtomicUsize::new(0),
-            ],
+            sender_count: [AtomicUsize::new(0), AtomicUsize::new(0)],
             send_buf: AtomicUsize::new(0),
         }
     }
@@ -136,13 +133,12 @@ impl<T, const N: usize> Mailbox<T, N> {
         if self.sender_count[n].load(Ordering::SeqCst) != 0 {
             return None;
         }
-        
+
         /* SAFETY: sender_count[n] == 0 */
         let buf = unsafe { &mut *self.buffers[n].get() };
         return buf.pop();
     }
 }
 
-unsafe impl <T: Send, const N: usize> Send for Mailbox<T, N> {}
-unsafe impl <T: Sync, const N: usize> Sync for Mailbox<T, N> {}
-
+unsafe impl<T: Send, const N: usize> Send for Mailbox<T, N> {}
+unsafe impl<T: Sync, const N: usize> Sync for Mailbox<T, N> {}

@@ -1,4 +1,4 @@
-use core::{ptr, mem};
+use core::{mem, ptr};
 
 #[repr(C, packed)]
 pub struct OldRsdp {
@@ -21,9 +21,7 @@ pub struct Rsdp {
 impl Rsdp {
     pub fn verify_checksum(&self) -> bool {
         let ptr: *const [u8; 36] = self as *const _ as *const _;
-        return unsafe {
-            (*ptr).iter().sum::<u8>() == 0u8
-        };
+        return unsafe { (*ptr).iter().sum::<u8>() == 0u8 };
     }
 }
 
@@ -40,10 +38,10 @@ pub struct SdtHeader {
     pub creator_revision: u32,
 }
 
-#[repr(C, packed)]
+#[repr(C)]
 pub struct Xsdt {
     pub header: SdtHeader,
-    pub other_sdts: [*const SdtHeader],
+    pub other_sdts: [u8],
 }
 
 impl Xsdt {
@@ -55,10 +53,8 @@ impl Xsdt {
             .checked_sub(mem::size_of::<SdtHeader>())
             .expect("Rsdp::get_xsdt - xsdt size is too small");
 
-        let xsdt_len = xsdt_bytes_len / 8;
-        
         let ptr = p as *const u8;
-        let ptr = ptr::slice_from_raw_parts(ptr, xsdt_len) as *const Xsdt;
+        let ptr = ptr::slice_from_raw_parts(ptr, xsdt_bytes_len) as *const Xsdt;
         return &*ptr;
     }
 }

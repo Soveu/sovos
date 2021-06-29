@@ -1,6 +1,6 @@
 #![cfg(feature = "ringzero")]
 
-use crate::{VirtAddr, PhysAddr, paging, impl_bits};
+use crate::{impl_bits, paging, PhysAddr, VirtAddr};
 
 /// The processor halt instruction (HLT) halts instruction execution, leaving the processor in the
 /// halt state. No registers or machine state are modified as a result of executing the HLT
@@ -52,7 +52,6 @@ pub fn set_global_interrupt_flag() {
     }
 }
 
-
 #[inline(always)]
 pub fn clear_global_interrupt_flag() {
     unsafe {
@@ -76,8 +75,8 @@ pub fn load_access_rights_byte() {
 }
 */
 
-/// Safety:  Unlike the WBINVD instruction, no modified cache lines are 
-/// written to memory. The INVD instruction should only be used in 
+/// Safety:  Unlike the WBINVD instruction, no modified cache lines are
+/// written to memory. The INVD instruction should only be used in
 /// situations where memory coherency is not required.
 #[inline(always)]
 pub unsafe fn invd() {
@@ -105,9 +104,6 @@ pub fn wbnoinvd() {
         asm!("wbnoinvd", options(nostack, nomem));
     }
 }
-
-
-
 
 #[inline(always)]
 pub fn incssp() {

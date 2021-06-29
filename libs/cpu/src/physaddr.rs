@@ -24,7 +24,9 @@ impl<T> PhysAddr<T> {
         unsafe { PhysAddr::<U>::new_unchecked(self.addr) }
     }
     pub const fn new(addr: u64) -> Option<Self> {
-        if (addr >> 52) == 0 /* && addr as usize % core::mem::align_of::<T>() == 0 */ {
+        if (addr >> 52) == 0
+        /* && addr as usize % core::mem::align_of::<T>() == 0 */
+        {
             return unsafe { Some(Self::new_unchecked(addr)) };
         }
 
@@ -53,10 +55,7 @@ impl<T> PhysSlice<T> {
         }
     }
     pub const fn new(addr: PhysAddr<T>, size: u64) -> Self {
-        Self {
-            addr,
-            size,
-        }
+        Self { addr, size }
     }
     pub const fn addr(&self) -> PhysAddr<T> {
         self.addr
@@ -75,4 +74,3 @@ impl<T> Clone for PhysSlice<T> {
         *self
     }
 }
-

@@ -23,9 +23,7 @@ impl Flags {
 #[test]
 fn one() {
     let f = Flags::new();
-    let f = f
-        .set_one()
-        .set_zero();
+    let f = f.set_one().set_zero();
     let f = f.clear_one();
 
     assert!(f.zero());

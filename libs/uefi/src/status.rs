@@ -13,9 +13,7 @@ impl RawStatus {
         }
 
         let error_code = self.0 - EFI_ERROR_BEGIN + Error::LoadError as usize;
-        return unsafe {
-            Some(core::mem::transmute(error_code as u8))
-        };
+        return unsafe { Some(core::mem::transmute(error_code as u8)) };
     }
 
     pub fn get_efi_warning(&self) -> Option<Warning> {
@@ -27,9 +25,7 @@ impl RawStatus {
         }
 
         let warn_code = self.0 - EFI_WARN_BEGIN + Warning::UnknownGlyph as usize;
-        return unsafe {
-            Some(core::mem::transmute(warn_code as u8))
-        };
+        return unsafe { Some(core::mem::transmute(warn_code as u8)) };
     }
 }
 
@@ -80,5 +76,3 @@ pub enum Warning {
     Filesystem,
     ResetRequired,
 }
-
-

@@ -63,7 +63,7 @@ impl Entry {
             ptr_lower,
             ptr_mid,
             ptr_high,
-            
+
             flags,
             gdt_selector: crate::segmentation::CODE_DESCRIPTOR_OFFSET,
 
@@ -82,7 +82,10 @@ pub struct TableRegister {
 
 impl TableRegister {
     pub fn read() -> Self {
-        let mut idtr = Self { limit: 0, base: core::ptr::null() };
+        let mut idtr = Self {
+            limit: 0,
+            base: core::ptr::null(),
+        };
         unsafe {
             asm!("sidt [{}]", in(reg) &mut idtr, options(nostack));
         }
@@ -95,10 +98,7 @@ impl TableRegister {
         let limit: usize = core::mem::size_of_val(table) - 1;
         let limit = limit as u16;
 
-        Self {
-            base: table,
-            limit,
-        }
+        Self { base: table, limit }
     }
 }
 
@@ -112,8 +112,8 @@ pub struct SavedRegisters {
     pub rsi: u64,
     pub rdi: u64,
     pub rbp: u64,
-    pub r8:  u64,
-    pub r9:  u64,
+    pub r8: u64,
+    pub r9: u64,
     pub r10: u64,
     pub r11: u64,
     pub r12: u64,
@@ -147,7 +147,8 @@ impl Stack {
 impl core::fmt::Debug for Stack {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
-            f, "\
+            f,
+            "\
 Stack {{
     error_code: {:?},
     instruction_pointer: 0x{:x},
@@ -156,19 +157,19 @@ Stack {{
     stack_pointer: 0x{:x},
     stack_segment: {},
 }}",
-             self.error_code(),
-             self.instruction_pointer,
-             self.code_segment,
-             self.flags,
-             self.stack_pointer,
-             self.stack_segment,
+            self.error_code(),
+            self.instruction_pointer,
+            self.code_segment,
+            self.flags,
+            self.stack_pointer,
+            self.stack_segment,
         )
     }
 }
 
 pub macro make_handler($fnname:ident) {{
     const __TYPECK: extern "sysv64" fn(&mut $crate::interrupt::Stack) = $fnname;
-    
+
     #[naked]
     extern "x86-interrupt" fn __interrupt_handler_wrapper() {
         unsafe {
@@ -228,4 +229,3 @@ pub macro make_handler($fnname:ident) {{
 
     __interrupt_handler_wrapper
 }}
-

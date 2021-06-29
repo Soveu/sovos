@@ -5,14 +5,14 @@ pub struct MapKey(pub(crate) u64);
 
 #[repr(C)]
 pub struct Descriptor {
-    /// Type of the memory region. Type EFI_MEMORY_TYPE is defined in the 
+    /// Type of the memory region. Type EFI_MEMORY_TYPE is defined in the
     /// AllocatePages() function description.
     pub typ: u32,
 
     _padding: u32,
 
-    /// Physical address of the first byte in the memory region. 
-    /// PhysicalStart must be aligned on a 4KiB boundary, and must not 
+    /// Physical address of the first byte in the memory region.
+    /// PhysicalStart must be aligned on a 4KiB boundary, and must not
     /// be above 0xfffffffffffff000. Type EFI_PHYSICAL_ADDRESS is
     /// defined in the AllocatePages() function description.
     pub phys_start: u64,
@@ -24,15 +24,15 @@ pub struct Descriptor {
     pub virt_start: u64,
 
     /// Number of 4KiB pages in the memory region.
-    /// NumberOfPages must not be 0, and must not be any value that would 
+    /// NumberOfPages must not be 0, and must not be any value that would
     /// represent a memory page with a start address, either physical or
     /// virtual, above 0xfffffffffffff000
     pub pages: u64,
 
-    /// Attributes of the memory region that describe the bit mask of 
-    /// capabilities for that memory region, and not necessarily the current 
+    /// Attributes of the memory region that describe the bit mask of
+    /// capabilities for that memory region, and not necessarily the current
     /// settings for that memory region. See the following
-    /// “Memory Attribute Definitions.” 
+    /// “Memory Attribute Definitions.”
     pub attributes: Attributes,
 }
 
@@ -111,7 +111,7 @@ impl Type {
     }
 }
 
-pub struct DescriptorIterator<'buf>{
+pub struct DescriptorIterator<'buf> {
     buf: &'buf [u64],
     descriptor_size: usize,
 }
@@ -127,7 +127,10 @@ impl<'buf> DescriptorIterator<'buf> {
         assert_eq!(descriptor_size % 8, 0);
         let descriptor_size = descriptor_size / 8;
 
-        Self { buf, descriptor_size }
+        Self {
+            buf,
+            descriptor_size,
+        }
     }
 }
 
@@ -168,4 +171,3 @@ impl_bits! {
         runtime = 63,
     }
 }
-

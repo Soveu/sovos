@@ -1,23 +1,22 @@
 #![no_std]
-
 #![feature(abi_efiapi)]
 
 use core::mem::MaybeUninit;
 
-mod status;
-mod header;
-mod guid;
-mod system_table;
 mod boot_services;
-mod runtime_services;
+mod guid;
+mod header;
 pub mod memory;
+mod runtime_services;
+mod status;
+mod system_table;
 
-pub use status::*;
-pub use header::*;
-pub use guid::*;
-pub use system_table::*;
 pub use boot_services::*;
+pub use guid::*;
+pub use header::*;
 pub use runtime_services::*;
+pub use status::*;
+pub use system_table::*;
 
 /// Version of EFI spec that this crate is based on.
 pub const SPECIFICATION_VERSION: Revision = Revision::new(2, 70);
@@ -61,4 +60,3 @@ impl core::fmt::Display for Revision {
         core::fmt::Debug::fmt(&self.as_tuple(), f)
     }
 }
-

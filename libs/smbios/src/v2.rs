@@ -18,4 +18,3 @@ pub struct EntryPoint {
 
     pub bcd_rev: u8,
 }
-

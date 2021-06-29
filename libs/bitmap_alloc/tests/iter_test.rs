@@ -27,9 +27,27 @@ fn alloc_test() {
 
     unsafe { bmp.allocate(1..2) };
     let mut iter = iter::free_chunk_iterator(bmp);
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 0, len: NonZeroU64::new(4096).unwrap() }));
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 8192, len: NonZeroU64::new(4096).unwrap() }));
-    assert_eq!(iter.nth(3), Some(MemoryChunk { addr: 8192 + 4 * 4096, len: NonZeroU64::new(4096).unwrap() }));
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 0,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 8192,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.nth(3),
+        Some(MemoryChunk {
+            addr: 8192 + 4 * 4096,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
 }
 
 #[test]
@@ -40,9 +58,27 @@ fn alloc_test2() {
 
     unsafe { bmp.allocate(512..514) };
     let mut iter = iter::free_chunk_iterator(bmp);
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 0, len: NonZeroU64::new(4096 * 512).unwrap() }));
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 514 * 4096, len: NonZeroU64::new(4096).unwrap() }));
-    assert_eq!(iter.nth(3), Some(MemoryChunk { addr: 518 * 4096, len: NonZeroU64::new(4096).unwrap() }));
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 0,
+            len: NonZeroU64::new(4096 * 512).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 514 * 4096,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.nth(3),
+        Some(MemoryChunk {
+            addr: 518 * 4096,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
 }
 
 #[test]
@@ -53,8 +89,20 @@ fn alloc_test3() {
 
     unsafe { bmp.allocate(512..1024) };
     let mut iter = iter::free_chunk_iterator(bmp);
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 0, len: NonZeroU64::new(4096 * 512).unwrap() }));
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 1024 * 4096, len: NonZeroU64::new(4096 * 512).unwrap() }));
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 0,
+            len: NonZeroU64::new(4096 * 512).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 1024 * 4096,
+            len: NonZeroU64::new(4096 * 512).unwrap()
+        })
+    );
 }
 
 #[test]
@@ -65,8 +113,20 @@ fn alloc_test4() {
 
     unsafe { bmp.allocate(2..1025) };
     let mut iter = iter::free_chunk_iterator(bmp);
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 0, len: NonZeroU64::new(4096).unwrap() }));
-    assert_eq!(iter.next(), Some(MemoryChunk { addr: 4096, len: NonZeroU64::new(4096).unwrap() }));
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 0,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
+    assert_eq!(
+        iter.next(),
+        Some(MemoryChunk {
+            addr: 4096,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
 
     //eprintln!("bits = {:x}", iter.packed_bits);
 
@@ -75,6 +135,11 @@ fn alloc_test4() {
 
     let next = iter.next();
     //eprintln!("bits = {:x}", iter.packed_bits);
-    assert_eq!(next, Some(MemoryChunk { addr: 1025 * 4096, len: NonZeroU64::new(4096).unwrap() }));
+    assert_eq!(
+        next,
+        Some(MemoryChunk {
+            addr: 1025 * 4096,
+            len: NonZeroU64::new(4096).unwrap()
+        })
+    );
 }
-

@@ -52,10 +52,7 @@ impl<T> VirtSlice<T> {
         }
     }
     pub const fn new(addr: VirtAddr<T>, size: usize) -> Self {
-        Self {
-            addr,
-            size,
-        }
+        Self { addr, size }
     }
     pub const fn len(&self) -> usize {
         self.size as usize
@@ -83,4 +80,3 @@ impl<T> Clone for VirtSlice<T> {
         *self
     }
 }
-

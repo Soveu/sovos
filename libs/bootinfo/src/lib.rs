@@ -1,10 +1,10 @@
 #![no_std]
 
 use arrayvec::ArrayVec;
-use cpu::paging::{self, PML4Entry, PDPEntry, PDEntry, PTEntry};
-use cpu::{PhysAddr, PhysSlice, paging::Megapage, segmentation::GlobalDescriptorTable, interrupt};
-use uefi;
+use cpu::paging::{self, PDEntry, PDPEntry, PML4Entry, PTEntry};
+use cpu::{interrupt, paging::Megapage, segmentation::GlobalDescriptorTable, PhysAddr, PhysSlice};
 use uart_16550::SerialPort;
+use uefi;
 
 #[repr(C, align(4096))]
 pub struct Bootinfo {
@@ -29,34 +29,34 @@ impl Bootinfo {
     pub const fn new() -> Self {
         const IDT_ENTRY: interrupt::Entry = interrupt::Entry::new();
         Self {
-            paging_root:    paging::Table::new(),
-            pdp:            paging::Table::new(),
-            pd:             paging::Table::new(),
-            page_table:     paging::Table::new(),
+            paging_root: paging::Table::new(),
+            pdp: paging::Table::new(),
+            pd: paging::Table::new(),
+            page_table: paging::Table::new(),
 
-            idt:            [IDT_ENTRY; 256],
-            gdt:            GlobalDescriptorTable::new(),
+            idt: [IDT_ENTRY; 256],
+            gdt: GlobalDescriptorTable::new(),
 
-            this:           PhysAddr::null(),
-            kernel_pslice:  PhysSlice::null(),
+            this: PhysAddr::null(),
+            kernel_pslice: PhysSlice::null(),
 
-            buf:            [0u8; 8192],
-            uefi_meminfo:   ArrayVec::new_const(),
-            uefi_systable:  core::ptr::null_mut(),
-            serial:         None,
+            buf: [0u8; 8192],
+            uefi_meminfo: ArrayVec::new_const(),
+            uefi_systable: core::ptr::null_mut(),
+            serial: None,
         }
     }
 
     /*
     /// # Safety
-    /// * Technically this struct is self-referential, 
+    /// * Technically this struct is self-referential,
     /// so we should use Pin, but for simplicity sake we don't.
     /// * Memory must be identity-mapped.
     /// * Kernel base must be 0xffff_ffff_c000_0000.
     pub unsafe fn map_kernel(
         &mut self,
         text: PhysSlice<Megapage>,
-        rodata: PhysSlice<Megapage>, 
+        rodata: PhysSlice<Megapage>,
         data: PhysSlice<Megapage>,
     ) {
         let base = 0xffff_ffff_c000_0000u64;

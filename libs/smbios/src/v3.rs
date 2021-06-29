@@ -16,4 +16,3 @@ pub struct EntryPoint {
     pub table_max_size: u32,
     pub table_addr: u64,
 }
-

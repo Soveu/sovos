@@ -18,7 +18,6 @@ pub struct RuntimeServices {
     get_next_high_mono_count: usize,
 
     reset_system: usize,
-
     // UEFI 2.0
     /*
     update_capsule,

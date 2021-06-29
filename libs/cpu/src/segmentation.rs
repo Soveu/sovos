@@ -107,7 +107,10 @@ pub struct GDTR {
 
 impl GDTR {
     pub fn read() -> Self {
-        let mut gdtr = Self { limit: 0, base: ptr::null() };
+        let mut gdtr = Self {
+            limit: 0,
+            base: ptr::null(),
+        };
         unsafe {
             asm!("sgdt [{}]", in(reg) &mut gdtr, options(nostack));
         }
@@ -133,10 +136,7 @@ impl GDTR {
         let limit: usize = core::mem::size_of::<GlobalDescriptorTable>() - 1;
         let limit = limit as u16;
 
-        Self {
-            base: table,
-            limit,
-        }
+        Self { base: table, limit }
     }
 
     #[naked]

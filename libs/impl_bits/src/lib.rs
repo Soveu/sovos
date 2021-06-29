@@ -61,4 +61,3 @@ macro_rules! impl_bits {
         }
     }
 }
-

@@ -21,10 +21,7 @@ impl core::fmt::Debug for Guid {
         if table_name == "Unknown" {
             return f.write_fmt(format_args!(
                 "Guid(0x{:x}, 0x{:x}, 0x{:x}, {:?}",
-                self.0,
-                self.1,
-                self.2,
-                self.3,
+                self.0, self.1, self.2, self.3,
             ));
         }
 
@@ -79,4 +76,3 @@ impl_guids! {
     EFI_DEBUG_IMAGE_INFO_TABLE =
         {0x49152E77,0x1ADA,0x4764, {0xB7,0xA2,0x7A,0xFE,0xFE,0xD9,0x5E,0x8B}},
 }
-

@@ -1,14 +1,12 @@
 #![no_std]
-
 #![allow(unused_parens)]
 
 pub mod iter;
 
-use core::ops::Range;
 use core::num::NonZeroU64;
+use core::ops::Range;
 
-#[derive(Debug, PartialEq, Eq)]
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct MemoryChunk {
     pub addr: u64,
     pub len: NonZeroU64,
@@ -91,7 +89,7 @@ pub struct BitmapAllocator {
 impl BitmapAllocator {
     pub const MAX_PAGES: u64 = 512 * 512 * 512;
     pub const MAX_BYTES: u64 = Self::MAX_PAGES * 4096;
-    
+
     pub const MAX_ROOT: u32 = 512 * 512;
     pub const GIGAPAGE_ROOT: u32 = Self::MAX_ROOT;
     pub const MAX_LEAF: u16 = 512;
@@ -110,8 +108,7 @@ impl BitmapAllocator {
     }
 
     pub fn with_range(r: Range<usize>) -> Self {
-        let len = r.end.checked_sub(r.start)
-            .unwrap();
+        let len = r.end.checked_sub(r.start).unwrap();
 
         Self {
             start: r.start as u64,
@@ -134,11 +131,11 @@ impl BitmapAllocator {
             return self.allocate_pages(r);
         }
 
-        self.allocate_pages(r.start .. head_end);
-        self.allocate_pages(tail_start .. r.end);
+        self.allocate_pages(r.start..head_end);
+        self.allocate_pages(tail_start..r.end);
 
         /* Allocate megapages */
-        let r = (head_end / 512 .. tail_start / 512);
+        let r = (head_end / 512..tail_start / 512);
         let head_end = match r.start % 512 {
             0 => r.start,
             x => r.start + 512 - x,
@@ -149,24 +146,23 @@ impl BitmapAllocator {
             return self.allocate_megapages(r);
         }
 
-        self.allocate_megapages(r.start .. head_end);
-        self.allocate_megapages(tail_start .. r.end);
+        self.allocate_megapages(r.start..head_end);
+        self.allocate_megapages(tail_start..r.end);
 
         /* Allocate gigapages */
-        let r = (head_end / 512 .. tail_start / 512);
+        let r = (head_end / 512..tail_start / 512);
         self.allocate_gigapages(r);
     }
 
     /* SAFETY: the page range must fit within [0+512*n .. 512+512*n) range */
     unsafe fn allocate_pages(&mut self, r: Range<usize>) {
-        debug_assert!(self.bits.get(r.start / 512 .. r.end / 512).is_some());
+        debug_assert!(self.bits.get(r.start / 512..r.end / 512).is_some());
 
         for i in r.clone() {
             let index = i / 512;
             let bit = i % 512;
 
-            self.bits.get_unchecked_mut(index)
-                .set_bit_unchecked(bit);
+            self.bits.get_unchecked_mut(index).set_bit_unchecked(bit);
         }
 
         let leaf = r.start / 512;
@@ -180,7 +176,8 @@ impl BitmapAllocator {
     unsafe fn allocate_megapages(&mut self, r: Range<usize>) {
         debug_assert!(self.leaves.get(r.clone()).is_some());
 
-        self.leaves.get_unchecked_mut(r.clone())
+        self.leaves
+            .get_unchecked_mut(r.clone())
             .iter_mut()
             .for_each(|x| *x = Self::MEGAPAGE_LEAF);
 
@@ -191,7 +188,8 @@ impl BitmapAllocator {
     unsafe fn allocate_gigapages(&mut self, r: Range<usize>) {
         debug_assert!(self.root.get(r.clone()).is_some());
 
-        self.root.get_unchecked_mut(r)
+        self.root
+            .get_unchecked_mut(r)
             .iter_mut()
             .for_each(|x| *x = Self::GIGAPAGE_ROOT);
     }
@@ -209,11 +207,11 @@ impl BitmapAllocator {
             return self.deallocate_pages(r);
         }
 
-        self.deallocate_pages(r.start .. head_end);
-        self.deallocate_pages(tail_start .. r.end);
+        self.deallocate_pages(r.start..head_end);
+        self.deallocate_pages(tail_start..r.end);
 
         /* Allocate megapages */
-        let r = (head_end / 512 .. tail_start / 512);
+        let r = (head_end / 512..tail_start / 512);
         let head_end = match r.start % 512 {
             0 => r.start,
             x => r.start + 512 - x,
@@ -224,24 +222,23 @@ impl BitmapAllocator {
             return self.deallocate_megapages(r);
         }
 
-        self.deallocate_megapages(r.start .. head_end);
-        self.deallocate_megapages(tail_start .. r.end);
+        self.deallocate_megapages(r.start..head_end);
+        self.deallocate_megapages(tail_start..r.end);
 
         /* Allocate gigapages */
-        let r = (head_end / 512 .. tail_start / 512);
+        let r = (head_end / 512..tail_start / 512);
         self.deallocate_gigapages(r);
     }
 
     /* SAFETY: the page range must fit within [0+512*n .. 512+512*n) range */
     unsafe fn deallocate_pages(&mut self, r: Range<usize>) {
-        debug_assert!(self.bits.get(r.start / 512 .. r.end / 512).is_some());
+        debug_assert!(self.bits.get(r.start / 512..r.end / 512).is_some());
 
         for i in r.clone() {
             let index = i / 512;
             let bit = i % 512;
 
-            self.bits.get_unchecked_mut(index)
-                .clear_bit_unchecked(bit);
+            self.bits.get_unchecked_mut(index).clear_bit_unchecked(bit);
         }
 
         let leaf = r.start / 512;
@@ -255,7 +252,8 @@ impl BitmapAllocator {
     unsafe fn deallocate_megapages(&mut self, r: Range<usize>) {
         debug_assert!(self.leaves.get(r.clone()).is_some());
 
-        self.leaves.get_unchecked_mut(r.clone())
+        self.leaves
+            .get_unchecked_mut(r.clone())
             .iter_mut()
             .for_each(|x| *x = 0);
 
@@ -266,9 +264,9 @@ impl BitmapAllocator {
     unsafe fn deallocate_gigapages(&mut self, r: Range<usize>) {
         debug_assert!(self.root.get(r.clone()).is_some());
 
-        self.root.get_unchecked_mut(r)
+        self.root
+            .get_unchecked_mut(r)
             .iter_mut()
             .for_each(|x| *x = 0);
     }
 }
-

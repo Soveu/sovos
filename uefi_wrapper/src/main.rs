@@ -4,6 +4,7 @@
 #![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
+#![feature(array_chunks)]
 #![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
 #![feature(slice_ptr_len)]
@@ -76,8 +77,11 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
                 assert!(rsdp.verify_checksum());
 
                 let xsdt: &acpi::Xsdt = acpi::Xsdt::from_raw(rsdp.xsdt);
-                for sdt in &xsdt.other_sdts {
-                    let sdt: *const acpi::SdtHeader = core::ptr::read_unaligned(sdt);
+                let sdt_iter = xsdt.other_sdts
+                    .array_chunks::<8>()
+                    .map(|x| usize::from_ne_bytes(*x) as *const acpi::SdtHeader);
+
+                for sdt in sdt_iter {
                     let sig = &(*sdt).signature;
                     let sig = core::str::from_utf8_unchecked(sig);
                     let oid = &(*sdt).oem_id;

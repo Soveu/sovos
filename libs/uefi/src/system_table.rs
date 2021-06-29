@@ -35,7 +35,7 @@ pub struct SystemTable {
     /// The handle for the active standard error console device. This handle must
     /// support the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
     pub console_err_handle: Cell<Handle>,
-    /// A pointer to the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL interface that is 
+    /// A pointer to the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL interface that is
     /// associated with StandardErrorHandle.
     pub con_err: Cell<usize>,
 

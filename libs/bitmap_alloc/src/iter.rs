@@ -73,7 +73,9 @@ impl Iterator for ChunkIterator<'_> {
     }
 }
 
-pub fn free_chunk_iterator<'bmp>(bmp: &'bmp BitmapAllocator) -> impl Iterator<Item = MemoryChunk> + 'bmp {
+pub fn free_chunk_iterator<'bmp>(
+    bmp: &'bmp BitmapAllocator,
+) -> impl Iterator<Item = MemoryChunk> + 'bmp {
     fn mapper(x: (bool, MemoryChunk)) -> Option<MemoryChunk> {
         if x.0 {
             None
@@ -85,7 +87,9 @@ pub fn free_chunk_iterator<'bmp>(bmp: &'bmp BitmapAllocator) -> impl Iterator<It
     ChunkIterator::new(bmp).filter_map(mapper)
 }
 
-pub fn occupied_chunk_iterator<'bmp>(bmp: &'bmp BitmapAllocator) -> impl Iterator<Item = MemoryChunk> + 'bmp {
+pub fn occupied_chunk_iterator<'bmp>(
+    bmp: &'bmp BitmapAllocator,
+) -> impl Iterator<Item = MemoryChunk> + 'bmp {
     fn mapper(x: (bool, MemoryChunk)) -> Option<MemoryChunk> {
         if x.0 {
             Some(x.1)
@@ -96,4 +100,3 @@ pub fn occupied_chunk_iterator<'bmp>(bmp: &'bmp BitmapAllocator) -> impl Iterato
 
     ChunkIterator::new(bmp).filter_map(mapper)
 }
-

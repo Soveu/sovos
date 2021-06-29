@@ -18,7 +18,7 @@ macro_rules! impl_pagelevel {
             }
         }
 
-        impl const Bits for $flagsname {
+        impl Bits for $flagsname {
             fn as_u64(&self) -> u64 {
                 self.0
             }
@@ -28,25 +28,31 @@ macro_rules! impl_pagelevel {
         }
 
         #[repr(transparent)]
-        #[derive(Clone, Copy)]
-        pub struct $structname(u64);
-        
-        impl $structname {
-            pub const fn new(addr: PhysAddr, flags: $flagsname) -> Self {
-                Self(flags.as_u64() | addr.as_u64())
+        pub struct $structname(::core::cell::Cell<u64>);
+
+        //impl ::core::marker::Copy for $structname {}
+        impl ::core::clone::Clone for $structname {
+            fn clone(&self) -> Self {
+                Self(::core::cell::Cell::new(self.0.get()))
             }
         }
-        impl const Bits for $structname {
+
+        impl $structname {
+            pub fn new(addr: PhysAddr, flags: $flagsname) -> Self {
+                Self(::core::cell::Cell::new(flags.as_u64() | addr.as_u64()))
+            }
+        }
+        impl Bits for $structname {
             fn as_u64(&self) -> u64 {
-                self.0
+                self.0.get()
             }
             unsafe fn from_u64_unchecked(x: u64) -> Self {
-                Self(x)
+                Self(::core::cell::Cell::new(x))
             }
         }
-        impl const Entry for $structname {
+        impl Entry for $structname {
             type Flags = $flagsname;
-            const ZEROED: Self = Self(0);
+            const ZEROED: Self = Self(::core::cell::Cell::new(0));
         }
     }
 }
