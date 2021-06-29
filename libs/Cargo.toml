@@ -6,6 +6,8 @@ members = [
   "elf",
   "uefi",
   "impl_bits",
+  "smbios",
+  "bitmap_alloc",
 ]
 
 [profile.release]

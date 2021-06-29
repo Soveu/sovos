@@ -2,7 +2,8 @@
 
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
-#![feature(const_fn)]
+//#![feature(const_fn)]
+#![feature(const_fn_trait_bound)]
 #![feature(const_slice_from_raw_parts)]
 #![feature(const_mut_refs)]
 #![feature(const_trait_impl)]
@@ -22,6 +23,7 @@ mod macros;
 pub mod paging;
 pub mod segmentation;
 pub mod interrupt;
+pub mod acpi;
 
 mod instructions;
 pub use instructions::*;

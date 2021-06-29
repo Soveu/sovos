@@ -35,8 +35,8 @@ pub struct Handle(usize);
 #[derive(Debug)]
 #[repr(C)]
 pub struct Config {
-    guid: Guid,
-    table: usize,
+    pub guid: Guid,
+    pub table: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

@@ -2,7 +2,7 @@
 #![no_main]
 
 #![feature(asm)]
-#![feature(test)]
+#![feature(bench_black_box)]
 
 #[panic_handler]
 fn panic_handler(_info: &core::panic::PanicInfo) -> ! {

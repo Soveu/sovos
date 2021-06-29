@@ -4,6 +4,7 @@
 #![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
+#![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
 #![feature(slice_ptr_len)]
 #![feature(naked_functions)]
@@ -11,7 +12,7 @@
 use uart_16550::SerialPort;
 
 use elf::{Elf, self};
-use cpu;
+use cpu::{self, acpi};
 use bootinfo::Bootinfo;
 use uefi::{self, Verify};
 
@@ -57,7 +58,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
     let st = unsafe { &*st };
     let bootinfo = unsafe { &mut BOOTINFO };
     let mut out = unsafe { SerialPort::new(0x3F8) };
-    let mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
+    static mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
     out.init();
 
     assert_eq!(st.verify(), Ok(()));
@@ -65,16 +66,38 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
     let boot_services = unsafe { &*st.boot_services.get() };
     //assert_eq!(boot_services.verify(), Ok(()));
 
-    let (memkey, memmap) = boot_services.get_memory_map(&mut buf).unwrap();
+    for cfg in st.config_slice() {
+        use uefi::Guid;
+
+        if cfg.guid == Guid::EFI_ACPI_20_TABLE {
+            let rsdp: *const acpi::Rsdp = cfg.table as *const _;
+            unsafe {
+                let rsdp = &*rsdp;
+                assert!(rsdp.verify_checksum());
+
+                let xsdt: &acpi::Xsdt = acpi::Xsdt::from_raw(rsdp.xsdt);
+                for sdt in &xsdt.other_sdts {
+                    let sdt: *const acpi::SdtHeader = core::ptr::read_unaligned(sdt);
+                    let sig = &(*sdt).signature;
+                    let sig = core::str::from_utf8_unchecked(sig);
+                    let oid = &(*sdt).oem_id;
+                    let oid = core::str::from_utf8_unchecked(oid);
+                    brint!(out, "\tsignature: {:?} oem_id: {:?}\n", sig, oid);
+                }
+            }
+        }
+        brint!(out, "{:?}\n", cfg);
+    }
+
+    let (memkey, memmap) = boot_services.get_memory_map(unsafe { &mut buf }).unwrap();
     let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
     assert_eq!(ok, Ok(()));
-
-    //brint!(out, "\n{:#?}\n", st.config_slice());
 
     for map in memmap {
         use uefi::memory::Type;
 
         let mtyp = Type::from_int(map.typ);
+
         if mtyp == Some(Type::BootServicesCode) || mtyp == Some(Type::BootServicesData) {
             continue;
         }

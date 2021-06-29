@@ -148,7 +148,7 @@ impl core::fmt::Debug for Stack {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
             f, "\
-InterruptInfo {{
+Stack {{
     error_code: {:?},
     instruction_pointer: 0x{:x},
     code_segment: {},

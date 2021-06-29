@@ -20,7 +20,7 @@ pub struct Bootinfo {
     pub kernel_pslice: PhysSlice<u8>,
 
     pub buf: [u8; 8192],
-    pub uefi_meminfo: ArrayVec<[uefi::memory::Descriptor; 192]>,
+    pub uefi_meminfo: ArrayVec<uefi::memory::Descriptor, 192>,
     pub uefi_systable: *mut uefi::SystemTable,
     pub serial: Option<SerialPort>,
 }
@@ -41,7 +41,7 @@ impl Bootinfo {
             kernel_pslice:  PhysSlice::null(),
 
             buf:            [0u8; 8192],
-            uefi_meminfo:   ArrayVec::new(),
+            uefi_meminfo:   ArrayVec::new_const(),
             uefi_systable:  core::ptr::null_mut(),
             serial:         None,
         }
