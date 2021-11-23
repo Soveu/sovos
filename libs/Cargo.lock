@@ -21,10 +21,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
-name = "bitmap_alloc"
-version = "0.1.0"
-
-[[package]]
 name = "bootinfo"
 version = "0.1.0"
 dependencies = [
@@ -53,6 +49,14 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
 ]
+
+[[package]]
+name = "freetree"
+version = "0.1.0"
+
+[[package]]
+name = "hashmap_alloc"
+version = "0.1.0"
 
 [[package]]
 name = "impl_bits"

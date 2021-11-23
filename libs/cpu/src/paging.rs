@@ -4,16 +4,16 @@ const ADDR_MASK: u64 = ((1 << 40) - 1) << 12;
 const FLAGS_MASK: u64 = !ADDR_MASK;
 
 #[repr(align(4096))]
-pub struct Page([u8; 4096]);
+pub struct Page(pub [u8; 4096]);
 #[repr(align(2097152))]
-pub struct Megapage([u8; 2097152]);
+pub struct Megapage(pub [u8; 2097152]);
 
 pub trait Bits: Sized {
     unsafe fn from_u64_unchecked(x: u64) -> Self;
     fn as_u64(&self) -> u64;
 }
 
-pub trait Entry: Bits {
+pub trait Entry: Bits + AsRef<u64> {
     type Flags: Bits;
     const ZEROED: Self;
 
@@ -26,7 +26,21 @@ pub trait Entry: Bits {
         *self = unsafe { Self::from_u64_unchecked(addr | flags.as_u64()) };
     }
     fn flags(&self) -> Self::Flags {
-        let flags = self.as_u64() & FLAGS_MASK;
+        let bits_ref: &u64 = self.as_ref();
+        let bits_ptr = bits_ref as *const u64;
+
+        /* Because cpu can change flags, read_volatile is needed */
+        /* SAFETY: pointer comes directly from a reference and
+         * we mask out the flag bits */
+        unsafe {
+            let bits = bits_ptr.read_volatile();
+            let flags = bits & FLAGS_MASK;
+            return Self::Flags::from_u64_unchecked(flags);
+        }
+    }
+    fn flags_nonvolatile(&self) -> Self::Flags {
+        let bits = *self.as_ref();
+        let flags = bits & FLAGS_MASK;
         unsafe { Self::Flags::from_u64_unchecked(flags) }
     }
 }

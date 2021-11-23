@@ -2,6 +2,7 @@
 #![no_main]
 
 #![feature(asm)]
+#![feature(asm_sym)]
 #![feature(bench_black_box)]
 #![feature(naked_functions)]
 
@@ -19,11 +20,11 @@ static mut ZEROED: [u8; 1 << 18] = [0u8; 1 << 18];
 pub unsafe extern "sysv64" fn _start() -> ! {
     asm!("
         test sp, 15
-        jnz no_error_code
+        jnz 1f
 
         pop rax
 
-    no_error_code:
+    1:
         pop rax // pop the old ip
         pop rax // pop the code segment
         pop rbx // pop flags

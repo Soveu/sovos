@@ -7,7 +7,8 @@ members = [
   "uefi",
   "impl_bits",
   "smbios",
-  "bitmap_alloc",
+  "hashmap_alloc",
+  "freetree",
 ]
 
 [profile.release]

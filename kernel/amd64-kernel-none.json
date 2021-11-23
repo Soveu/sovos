@@ -1,6 +1,6 @@
 {
   "llvm-target": "x86_64-unknown-none",
-  "is-builtin": true,
+  "is-builtin": false,
   "arch": "x86_64",
   "cpu": "sandybridge",
   "features": "+cmov,+popcnt,-mmx,-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-3dnow,-3dnowa,-avx,-avx2,+soft-float",
@@ -24,18 +24,18 @@
 
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
-  "relocation-model": "static",
-  "relro-level": "off",
-  "code-model": "kernel",
+  "relocation-model": "pic",
+  "relro-level": "full",
+  "code-model": "small",
   "dynamic-linking": false,
   "has-elf-tls": false,
   "function-sections": false,
-  "split-debuginfo": "off",
+  "split-debuginfo": "packed",
   "eh-frame-header": false,
   "requires-uwtable": false,
   "needs-plt": false,
 
-  "pre-link-args": {
+  "aaaa_pre-link-args": {
     "ld.lld": [
       "--script=linker.ld",
       "-z", "nognustack"
