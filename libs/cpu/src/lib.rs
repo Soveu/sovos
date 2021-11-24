@@ -1,6 +1,8 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
+#![feature(asm_const)]
+#![feature(asm_sym)]
 //#![feature(const_fn)]
 #![feature(const_fn_trait_bound)]
 #![feature(const_slice_from_raw_parts)]

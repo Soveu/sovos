@@ -4,6 +4,7 @@
 #![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
+#![feature(asm_sym)]
 #![feature(array_chunks)]
 #![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
@@ -68,6 +69,8 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
     //assert_eq!(boot_services.verify(), Ok(()));
 
     for cfg in st.config_slice() {
+        brint!(out, "{:?}\n", cfg);
+
         use uefi::Guid;
 
         if cfg.guid == Guid::EFI_ACPI_20_TABLE {
@@ -90,7 +93,6 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
                 }
             }
         }
-        brint!(out, "{:?}\n", cfg);
     }
 
     let (memkey, memmap) = boot_services.get_memory_map(unsafe { &mut buf }).unwrap();
@@ -140,31 +142,15 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
 
 fn prepare_kernel_elf(out: &mut SerialPort) {
     let kernel = &KERNEL.0;
-    brint!(out, "kernel: {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
+    brint!(out, "\nkernel is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
     //brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
 
     let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(&KERNEL.0).unwrap();
     let pheaders = kernelelf.program_headers().unwrap();
 
-    brint!(out, "\n{:?} {:?}\n", kernelelf.header().machine(), kernelelf.header().e_ident.os_abi());
-    assert_eq!(pheaders[0].p_vaddr, KERNEL_VIRT_ADDR);
+    brint!(out, "{:?} {:?}\n", kernelelf.header().machine(), kernelelf.header().e_ident.os_abi());
+    brint!(out, "Headers: {:#?}\n", pheaders);
 
-    let (text, pheaders) = pheaders.split_first().unwrap();
-    assert!(text.is_executable());
-    assert!(!text.is_writable());
-    assert_eq!(text.p_align, 1 << 21);
-    assert_eq!(text.p_vaddr, KERNEL_VIRT_ADDR);
-
-    let (rodata, pheaders) = pheaders.split_first().unwrap();
-    assert!(!rodata.is_executable());
-    assert!(!rodata.is_writable());
-    assert_eq!(rodata.p_align, 1 << 21);
-
-    let (data_bss, pheaders) = pheaders.split_first().unwrap();
-    assert!(!data_bss.is_executable());
-    assert!(data_bss.is_writable());
-    assert_eq!(data_bss.p_align, 1 << 21);
-
-    brint!(out, "Remaining headers: {:#?}\n", pheaders);
+    todo!("Actually load the ELF");
 }
 

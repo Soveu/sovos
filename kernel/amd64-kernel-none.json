@@ -35,10 +35,11 @@
   "requires-uwtable": false,
   "needs-plt": false,
 
-  "aaaa_pre-link-args": {
+  "pre-link-args": {
     "ld.lld": [
-      "--script=linker.ld",
-      "-z", "nognustack"
+      "-z", "noexecstack",
+      "-z", "common-page-size=2097152",
+      "-z", "max-page-size=2097152"
     ]
   }
 }

@@ -287,6 +287,8 @@ pub enum SegmentType {
     ProgramHeader,
     ThreadLocalStorage,
 
+    OsSpecificGnuStack,
+
     OsSpecific(u32),
     CpuSpecific(u32),
 }
@@ -302,6 +304,7 @@ impl SegmentType {
             5 => Self::SharedLib,
             6 => Self::ProgramHeader,
             7 => Self::ThreadLocalStorage,
+            1685382481 => Self::OsSpecificGnuStack,
             0x60000000..=0x6fffffff => Self::OsSpecific(x),
             0x70000000..=0x7fffffff => Self::CpuSpecific(x),
             _ => return None,
