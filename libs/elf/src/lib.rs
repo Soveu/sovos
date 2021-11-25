@@ -1,10 +1,13 @@
 #![no_std]
 
+#![feature(arbitrary_enum_discriminant)]
+
 mod definitions;
 pub use definitions::*;
 
 use bytemuck;
 use core::mem;
+use core::num::NonZeroU64;
 
 pub struct Elf<'a, M: ElfMachine> {
     pub data: &'a [u8],
@@ -12,6 +15,7 @@ pub struct Elf<'a, M: ElfMachine> {
 }
 
 pub trait ElfMachine {
+    const HEADER_SIZE: usize;
     const CLASS: Class;
     const ENDIANESS: Data;
     const OSABI: OsAbi;
@@ -21,6 +25,7 @@ pub trait ElfMachine {
 
 pub struct Amd64;
 impl ElfMachine for Amd64 {
+    const HEADER_SIZE: usize = EHSIZE_X64;
     const CLASS: Class = Class::Bits64;
     const ENDIANESS: Data = Data::Lsb;
     const OSABI: OsAbi = OsAbi::SystemV;
@@ -49,27 +54,33 @@ pub enum Error {
 }
 
 impl<'a, M: ElfMachine> Elf<'a, M> {
-    pub fn program_headers(&self) -> Result<&[ProgramHeader], MemoryError> {
-        let header = self.header();
-
-        let phoff = match header.e_phoff {
+    fn get_array<T>(
+        data: &[u8],
+        offset: Option<NonZeroU64>,
+        n: usize,
+        entsize: usize
+    ) -> Result<&[T], MemoryError>
+    where
+        T: bytemuck::Pod,
+    {
+        let offset = match offset {
             Some(x) => x.get(),
             None => return Err(MemoryError::UnexpectedEnd),
         };
-        if phoff > usize::MAX as u64 {
+        if offset > usize::MAX as u64 {
             return Err(MemoryError::UnexpectedEnd);
         }
-        let phoff = phoff as usize;
+        let offset = offset as usize;
 
-        if header.e_phentsize as usize != mem::size_of::<ProgramHeader>() {
+        if entsize != mem::size_of::<T>() {
             return Err(MemoryError::SizeMismatch);
         }
-        let len_bytes = header.e_phnum as usize * mem::size_of::<ProgramHeader>();
+        let len_bytes = n * mem::size_of::<T>();
 
-        let start = phoff;
+        let start = offset;
         let end = start + len_bytes;
 
-        let chunk = match self.data.get(start..end) {
+        let chunk = match data.get(start..end) {
             Some(x) => x,
             None => return Err(MemoryError::UnexpectedEnd),
         };
@@ -81,8 +92,28 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
         };
     }
 
+    pub fn program_headers(&self) -> Result<&[ProgramHeader], MemoryError> {
+        let header = self.header();
+        return Self::get_array(
+            self.data,
+            header.e_phoff,
+            header.e_phnum as usize,
+            header.e_phentsize as usize,
+        );
+    }
+
+    pub fn section_headers(&self) -> Result<&[SectionHeader], MemoryError> {
+        let header = self.header();
+        return Self::get_array(
+            self.data,
+            header.e_shoff,
+            header.e_shnum as usize,
+            header.e_shentsize as usize,
+        );
+    }
+
     pub fn header(&self) -> &Header {
-        bytemuck::from_bytes(&self.data[..EHSIZE_X64])
+        bytemuck::from_bytes(&self.data[..M::HEADER_SIZE])
     }
 
     pub fn from_bytes(elf: &'a [u8]) -> Result<Self, Error> {
@@ -116,7 +147,7 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
             return Err(Error::WrongOsAbi);
         }
 
-        assert_eq!(mem::size_of::<Header>(), EHSIZE_X64);
+        assert_eq!(mem::size_of::<Header>(), M::HEADER_SIZE);
 
         let header = match elf.get(..EHSIZE_X64) {
             Some(x) => x,

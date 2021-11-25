@@ -1,17 +1,12 @@
-#![allow(unused_parens)]
 #![allow(dead_code)]
 
-use bytemuck::{Contiguous, Pod, Zeroable};
+use bytemuck::{Pod, Zeroable};
 use core::num::NonZeroU64;
 
 pub const MAGIC: [u8; 4] = *b"\x7FELF";
 pub const EV_CURRENT: u8 = 1;
 pub const EHSIZE_X86: usize = 52;
 pub const EHSIZE_X64: usize = 64;
-pub const PT_LOAD: u32 = 1;
-pub const PF_X: u32 = (1 << 0);
-pub const PF_W: u32 = (1 << 1);
-pub const PF_R: u32 = (1 << 2);
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -23,30 +18,6 @@ pub struct HeaderIdent {
     pub ei_osabi: u8,
     pub ei_abiversion: u8,
     pub ei_pad: [u8; 7],
-}
-
-impl HeaderIdent {
-    pub fn os_abi(&self) -> Option<OsAbi> {
-        let osabi = match self.ei_osabi {
-            0 => OsAbi::SystemV,
-            1 => OsAbi::Hpux,
-            2 => OsAbi::NetBSD,
-            3 => OsAbi::GnuLinux,
-            6 => OsAbi::Solaris,
-            7 => OsAbi::Aix,
-            8 => OsAbi::Irix,
-            9 => OsAbi::FreeBSD,
-            10 => OsAbi::Tru64,
-            11 => OsAbi::Modesto,
-            12 => OsAbi::OpenBSD,
-            64 => OsAbi::ArmAEABI,
-            97 => OsAbi::Arm,
-            255 => OsAbi::Standalone,
-            _ => return None,
-        };
-
-        return Some(osabi);
-    }
 }
 
 #[repr(C)]
@@ -68,30 +39,11 @@ pub struct Header {
     pub e_shstrndx: u16,
 }
 
-impl Header {
-    pub fn machine(&self) -> Option<Machine> {
-        let machine = match self.e_machine {
-            0 => Machine::None,
-            20 => Machine::PowerPC,
-            21 => Machine::Power64,
-            40 => Machine::Arm,
-            3 => Machine::X86,
-            62 => Machine::X64,
-            183 => Machine::AArch64,
-            224 => Machine::AmdGpu,
-            243 => Machine::RiscV,
-            _ => return None,
-        };
-
-        return Some(machine);
-    }
-}
-
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ProgramHeader {
     pub p_type: u32,
-    pub p_flags: u32,
+    pub p_flags: ProgramHeaderFlags,
     pub p_offset: u64,
     pub p_vaddr: u64,
 
@@ -104,60 +56,12 @@ pub struct ProgramHeader {
     pub p_align: u64,
 }
 
-impl ProgramHeader {
-    pub fn segment_type(&self) -> Option<SegmentType> {
-        SegmentType::from_integer(self.p_type)
-    }
-
-    pub fn is_executable(&self) -> bool {
-        (self.p_flags >> 0) & 1 == 1
-    }
-    pub fn is_writable(&self) -> bool {
-        (self.p_flags >> 1) & 1 == 1
-    }
-    pub fn is_readable(&self) -> bool {
-        (self.p_flags >> 2) & 1 == 1
-    }
-    pub fn os_specific_flags(&self) -> u8 {
-        (self.p_flags >> 20) as u8
-    }
-    pub fn cpu_specific_flags(&self) -> u8 {
-        (self.p_flags >> 28) as u8
-    }
-}
-
-impl core::fmt::Debug for ProgramHeader {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let mut perms = ['_'; 3];
-        if self.is_readable() {
-            perms[0] = 'R';
-        }
-        if self.is_writable() {
-            perms[1] = 'W';
-        }
-        if self.is_executable() {
-            perms[2] = 'X';
-        }
-
-        f.write_fmt(format_args!(
-            "ProgramHeader {{ type: {:?}, flags: {}{}{}, \
-        offset: 0x{:X}, vaddr: 0x{:X}, paddr: 0x{:X}, filesz: {}, memsz: {}, p_align: 0x{:X} }}",
-            SegmentType::from_integer(self.p_type),
-            perms[0],
-            perms[1],
-            perms[2],
-            self.p_offset,
-            self.p_vaddr,
-            self.p_paddr,
-            self.p_filesz,
-            self.p_memsz,
-            self.p_align,
-        ))
-    }
-}
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct ProgramHeaderFlags(u32);
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct SectionHeader {
     pub sh_name: u32,
     pub sh_type: u32,
@@ -173,6 +77,8 @@ pub struct SectionHeader {
     pub sh_entsize: u64,
 }
 
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
 pub enum SectionType {
     Null = 0,
     Progbits,
@@ -201,35 +107,11 @@ pub enum Class {
     Bits64 = 2,
 }
 
-impl Class {
-    pub fn from_integer(x: u8) -> Option<Self> {
-        let r = match x {
-            1 => Self::Bits32,
-            2 => Self::Bits64,
-            _ => return None,
-        };
-
-        return Some(r);
-    }
-}
-
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 pub enum Data {
     Lsb = 1,
     Msb = 2,
-}
-
-impl Data {
-    pub fn from_integer(x: u8) -> Option<Self> {
-        let r = match x {
-            1 => Self::Lsb,
-            2 => Self::Msb,
-            _ => return None,
-        };
-
-        return Some(r);
-    }
 }
 
 #[repr(u16)]
@@ -287,14 +169,176 @@ pub enum SegmentType {
     ProgramHeader,
     ThreadLocalStorage,
 
-    OsSpecificGnuStack,
+    OsSpecificGnuStack = 1685382481,
+    OsSpecificGnuRelro = 1685382482,
 
     OsSpecific(u32),
     CpuSpecific(u32),
 }
 
+impl HeaderIdent {
+    pub const fn class(&self) -> Option<Class> {
+        Class::from_integer(self.ei_class)
+    }
+    pub const fn data(&self) -> Option<Data> {
+        Data::from_integer(self.ei_class)
+    }
+    pub const fn osabi(&self) -> Option<OsAbi> {
+        OsAbi::from_integer(self.ei_class)
+    }
+}
+
+impl Header {
+    pub const fn typ(&self) -> Option<Type> {
+        Type::from_integer(self.e_type)
+    }
+    pub const fn machine(&self) -> Option<Machine> {
+        Machine::from_integer(self.e_machine)
+    }
+}
+
+impl ProgramHeader {
+    pub fn segment_type(&self) -> Option<SegmentType> {
+        SegmentType::from_integer(self.p_type)
+    }
+}
+
+impl ProgramHeaderFlags {
+    pub fn is_executable(&self) -> bool {
+        (self.0 >> 0) & 1 == 1
+    }
+    pub fn is_writable(&self) -> bool {
+        (self.0 >> 1) & 1 == 1
+    }
+    pub fn is_readable(&self) -> bool {
+        (self.0 >> 2) & 1 == 1
+    }
+    pub fn os_specific_flags(&self) -> u8 {
+        (self.0 >> 20) as u8
+    }
+    pub fn cpu_specific_flags(&self) -> u8 {
+        (self.0 >> 28) as u8
+    }
+}
+
+impl SectionHeader {
+    pub const fn typ(&self) -> Option<SectionType> {
+        SectionType::from_integer(self.sh_type)
+    }
+}
+
+impl SectionType {
+    pub const fn from_integer(x: u32) -> Option<Self> {
+        let typ = match x {
+            0 => Self::Null,
+            1 => Self::Progbits,
+            2 => Self::Symtab,
+            3 => Self::Strtab,
+            4 => Self::Rela,
+            5 => Self::Hash,
+            6 => Self::Dynamic,
+            7 => Self::Note,
+            8 => Self::Nobits,
+            9 => Self::Rel,
+
+            11 => Self::Dynsym,
+            14 => Self::InitArray,
+            15 => Self::FiniArray,
+            16 => Self::PreinitArray,
+            17 => Self::Group,
+            18 => Self::SymtabShIndex,
+
+            _ => return None,
+        };
+
+        return Some(typ);
+    }
+}
+
+impl Class {
+    pub const fn from_integer(x: u8) -> Option<Self> {
+        let r = match x {
+            1 => Self::Bits32,
+            2 => Self::Bits64,
+            _ => return None,
+        };
+
+        return Some(r);
+    }
+}
+
+impl Data {
+    pub const fn from_integer(x: u8) -> Option<Self> {
+        let r = match x {
+            1 => Self::Lsb,
+            2 => Self::Msb,
+            _ => return None,
+        };
+
+        return Some(r);
+    }
+}
+
+impl Type {
+    pub const fn from_integer(x: u16) -> Option<Self> {
+        let t = match x {
+            0 => Self::None,
+            1 => Self::Relocatable,
+            2 => Self::Executable,
+            3 => Self::SharedObject,
+            4 => Self::Core,
+            _ => return None,
+        };
+
+        return Some(t);
+    }
+}
+
+impl Machine {
+    pub const fn from_integer(x: u16) -> Option<Self> {
+        let machine = match x {
+            0 => Machine::None,
+            20 => Machine::PowerPC,
+            21 => Machine::Power64,
+            40 => Machine::Arm,
+            3 => Machine::X86,
+            62 => Machine::X64,
+            183 => Machine::AArch64,
+            224 => Machine::AmdGpu,
+            243 => Machine::RiscV,
+            _ => return None,
+        };
+
+        return Some(machine);
+    }
+}
+
+impl OsAbi {
+    pub const fn from_integer(x: u8) -> Option<Self> {
+        let osabi = match x {
+            0 => OsAbi::SystemV,
+            1 => OsAbi::Hpux,
+            2 => OsAbi::NetBSD,
+            3 => OsAbi::GnuLinux,
+            6 => OsAbi::Solaris,
+            7 => OsAbi::Aix,
+            8 => OsAbi::Irix,
+            9 => OsAbi::FreeBSD,
+            10 => OsAbi::Tru64,
+            11 => OsAbi::Modesto,
+            12 => OsAbi::OpenBSD,
+            64 => OsAbi::ArmAEABI,
+            97 => OsAbi::Arm,
+            255 => OsAbi::Standalone,
+            _ => return None,
+        };
+
+        return Some(osabi);
+    }
+
+}
 impl SegmentType {
-    pub fn from_integer(x: u32) -> Option<Self> {
+    pub const fn from_integer(x: u32) -> Option<Self> {
         let ret = match x {
             0 => Self::Null,
             1 => Self::Load,
@@ -304,7 +348,10 @@ impl SegmentType {
             5 => Self::SharedLib,
             6 => Self::ProgramHeader,
             7 => Self::ThreadLocalStorage,
+
             1685382481 => Self::OsSpecificGnuStack,
+            1685382482 => Self::OsSpecificGnuRelro,
+
             0x60000000..=0x6fffffff => Self::OsSpecific(x),
             0x70000000..=0x7fffffff => Self::CpuSpecific(x),
             _ => return None,
@@ -314,17 +361,67 @@ impl SegmentType {
     }
 }
 
-unsafe impl Zeroable for HeaderIdent {}
-unsafe impl Pod for HeaderIdent {}
+impl core::fmt::Debug for ProgramHeaderFlags {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut perms = ['_'; 3];
+        if self.is_readable() {
+            perms[0] = 'R';
+        }
+        if self.is_writable() {
+            perms[1] = 'W';
+        }
+        if self.is_executable() {
+            perms[2] = 'X';
+        }
+        return write!(f, "{}{}{}", perms[0], perms[1], perms[2]);
+    }
+}
+
+impl core::fmt::Debug for ProgramHeader {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!(
+            "ProgramHeader {{ type: {:?}, flags: {:?}, offset: 0x{:X}, \
+            vaddr: 0x{:X}, paddr: 0x{:X}, filesz: {}, memsz: {}, p_align: 0x{:X} }}",
+            SegmentType::from_integer(self.p_type),
+            self.p_flags,
+            self.p_offset,
+            self.p_vaddr,
+            self.p_paddr,
+            self.p_filesz,
+            self.p_memsz,
+            self.p_align,
+        ))
+    }
+}
+
+impl core::fmt::Debug for SectionHeader {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!(
+            "SectionHeader {{ name: {:?}, type: {:?}, flags: 0x{:X}, \
+            addr: 0x{:X}, offset: 0x{:X}, size: {}, link: {}, info: {}, \
+            addralign: {}, entsize: {} }}",
+            self.sh_name,
+            SectionType::from_integer(self.sh_type),
+            self.sh_flags,
+            self.sh_addr,
+            self.sh_offset,
+            self.sh_size,
+            self.sh_link,
+            self.sh_info,
+            self.sh_addralign,
+            self.sh_entsize,
+        ))
+    }
+}
 
 unsafe impl Zeroable for ProgramHeader {}
 unsafe impl Pod for ProgramHeader {}
 
+unsafe impl Zeroable for SectionHeader {}
+unsafe impl Pod for SectionHeader {}
+
+unsafe impl Zeroable for HeaderIdent {}
+unsafe impl Pod for HeaderIdent {}
+
 unsafe impl Zeroable for Header {}
 unsafe impl Pod for Header {}
-
-unsafe impl Contiguous for Type {
-    type Int = u16;
-    const MIN_VALUE: u16 = Type::None as u16;
-    const MAX_VALUE: u16 = Type::Core as u16;
-}

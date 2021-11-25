@@ -22,12 +22,8 @@ use core::fmt::Write;
 //use core::ptr;
 use core::mem::MaybeUninit;
 
-#[repr(align(2097152))]
-struct PageAligned<T: ?Sized>(T);
-
-static KERNEL: &PageAligned<[u8]> = &PageAligned(*include_bytes!(env!("SOVOS_KERNEL_PATH")));
+static KERNEL: &[u8] = include_bytes!(env!("SOVOS_KERNEL_PATH"));
 static mut BOOTINFO: Bootinfo = Bootinfo::new();
-const KERNEL_VIRT_ADDR: u64 = 0xffff_ffff_c000_0000;
 
 macro_rules! brint {
     ($($arg:tt)*) => {{
@@ -141,15 +137,23 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
 }
 
 fn prepare_kernel_elf(out: &mut SerialPort) {
-    let kernel = &KERNEL.0;
-    brint!(out, "\nkernel is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
+    let kernel = KERNEL;
+    brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
     //brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
 
-    let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(&KERNEL.0).unwrap();
+    let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(kernel).unwrap();
     let pheaders = kernelelf.program_headers().unwrap();
+    let sheaders = kernelelf.section_headers().unwrap();
 
-    brint!(out, "{:?} {:?}\n", kernelelf.header().machine(), kernelelf.header().e_ident.os_abi());
-    brint!(out, "Headers: {:#?}\n", pheaders);
+    brint!(out, "{:?} {:?} {:?} {:?} {:?}\n",
+        kernelelf.header().machine(),
+        kernelelf.header().typ(),
+        kernelelf.header().e_ident.osabi(),
+        kernelelf.header().e_ident.class(),
+        kernelelf.header().e_ident.data(),
+    );
+    brint!(out, "Program headers: {:#?}\n", pheaders);
+    brint!(out, "Section headers: {:#?}\n", sheaders);
 
     todo!("Actually load the ELF");
 }
