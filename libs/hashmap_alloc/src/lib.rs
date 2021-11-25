@@ -14,16 +14,14 @@ pub struct Entry {
     bits: [u64; BUDDY_FACTOR / 64],
     bits_set: u16,
 
-    /*
-    next: Option<EntryPtr>,
-    prev: Option<EntryPtr>,
-    */
+    next: Option<usize>,
+    prev: Option<usize>,
 }
 
 #[repr(C)]
 pub struct Alloc {
     shift: u8,
-    //last: Option<EntryPtr>,
+    next: Option<usize>,
     entries: [Option<Entry>; ENTRIES],
 }
 
@@ -31,7 +29,11 @@ pub type BigBlock = ();
 pub type SmallBlock = ();
 
 impl Alloc {
-    fn asdf(entry: &mut Option<Entry>, ptr: NonNull<Option<Entry>>, shift: u8) -> Option<&mut Entry> {
+    fn asdf(
+        entry: &mut Option<Entry>,
+        ptr: NonNull<Option<Entry>>,
+        shift: u8,
+    ) -> Option<&mut Entry> {
         match entry {
             Some(ref mut e) => return Some(e),
             None => {},
@@ -47,6 +49,8 @@ impl Alloc {
             ptr,
             bits,
             bits_set: 1,
+            next: None,
+            prev: None,
         });
 
         return None;
@@ -59,8 +63,8 @@ impl Alloc {
         let table_index = (table_index >> self.shift) % self.entries.len();
         let mut entry = &mut self.entries[table_index];
 
-        let entry = loop {
-            let unwrapped_entry: &mut Entry = match Self::asdf(entry, new, self.shift) {
+        let wrapped_entry = loop {
+            let unwrapped_entry = match Self::asdf(entry, new, self.shift) {
                 Some(e) => e,
                 None => return None,
             };
@@ -68,24 +72,41 @@ impl Alloc {
             let buddy_a = (unwrapped_entry.ptr.as_ptr() as usize) >> (self.shift + BUDDY_SHIFT);
             let buddy_b = (new.as_ptr() as usize) >> (self.shift + BUDDY_SHIFT);
 
-            if buddy_a == buddy_b && unwrapped_entry.bits_set == BUDDY_FACTOR as u16 - 1 {
-                return entry.take().map(|e| e.ptr.cast()); // TODO: round it down
-            }
             if buddy_a == buddy_b {
-                break unwrapped_entry;
+                break entry;
             }
 
             entry = unsafe { unwrapped_entry.ptr.as_mut() };
         };
 
+        let entry = wrapped_entry.as_mut().unwrap();
+
+        if entry.bits_set == BUDDY_FACTOR as u16 - 1 {
+            todo!("unlink the entry and pop it");
+        }
+
         let index = (new.as_ptr() as usize) >> self.shift;
         let index = index % BUDDY_FACTOR;
         entry.bits[index / 64] |= 1 << (index % 64);
         entry.bits_set += 1;
+        entry.next = self.next.replace(index);
+
         return None;
     }
 
     pub unsafe fn pop(&mut self) -> Option<NonNull<SmallBlock>> {
-        todo!()
+        let entry = &mut self.entries[self.next?];
+        let entry = entry.as_mut().unwrap();
+        debug_assert_eq!(entry.prev, None);
+
+        if let Some(next) = entry.next {
+            todo!()
+        }
+
+        if let Some(next) = entry.ptr.as_mut() {
+            todo!()
+        }
+
+        return Some(entry.ptr.cast());
     }
 }
