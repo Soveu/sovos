@@ -2,34 +2,57 @@
 pub struct RawStatus(pub usize);
 
 impl RawStatus {
-    pub const OK: Self = Self(0);
-
-    pub fn get_efi_error(&self) -> Option<Error> {
+    #[track_caller]
+    fn get(&self) -> Result<Option<Warning>, Error> {
         const EFI_ERROR_BEGIN: usize = 0x8000_0000_0000_0000 + Error::LoadError as usize;
         const EFI_ERROR_END: usize = EFI_ERROR_BEGIN + Error::HttpError as usize;
 
-        if self.0 < EFI_ERROR_BEGIN || self.0 > EFI_ERROR_END {
-            return None;
-        }
-
-        let error_code = self.0 - EFI_ERROR_BEGIN + Error::LoadError as usize;
-        return unsafe { Some(core::mem::transmute(error_code as u8)) };
-    }
-
-    pub fn get_efi_warning(&self) -> Option<Warning> {
         const EFI_WARN_BEGIN: usize = 0x0000_0000_0000_0000 + Warning::UnknownGlyph as usize;
         const EFI_WARN_END: usize = EFI_WARN_BEGIN + Warning::ResetRequired as usize;
 
-        if self.0 < EFI_WARN_BEGIN || self.0 > EFI_WARN_END {
-            return None;
+        if self.0 == 0 {
+            return Ok(None);
         }
 
-        let warn_code = self.0 - EFI_WARN_BEGIN + Warning::UnknownGlyph as usize;
-        return unsafe { Some(core::mem::transmute(warn_code as u8)) };
+        if (EFI_ERROR_BEGIN..=EFI_ERROR_END).contains(&self.0) {
+            let error_code = self.0 - EFI_ERROR_BEGIN + Error::LoadError as usize;
+            /* SAFETY: we have just checked if the enum is in range */
+            return unsafe { Err(core::mem::transmute(error_code as u8)) };
+        }
+
+        if (EFI_WARN_BEGIN..=EFI_WARN_END).contains(&self.0) {
+            let warn_code = self.0 - EFI_WARN_BEGIN + Warning::UnknownGlyph as usize;
+            /* SAFETY: we have just checked if the enum is in range */
+            return unsafe { Ok(Some(core::mem::transmute(warn_code as u8))) };
+        }
+
+        panic!("Invalid UEFI status {:x}", self.0);
+    }
+
+    #[track_caller]
+    pub fn ok_or_expect_errors(
+        &self,
+        expected_errors: &[Error],
+    ) -> Result<(), Error> {
+        let error = match self.get() {
+            Err(e) => e,
+            Ok(None) => return Ok(()),
+            Ok(Some(warn)) => panic!("This crate doesn't handle warnings, got {:?}", warn),
+        };
+
+        if expected_errors.iter().any(|&err| err == error) {
+            return Err(error);
+        }
+
+        panic!(
+            "Invalid UEFI implementation - got Error::{:?}, expected one of {:?}",
+            error,
+            expected_errors,
+        );
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Error {
     LoadError = 1,
     InvalidParameter,
@@ -66,7 +89,7 @@ pub enum Error {
     HttpError,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Warning {
     UnknownGlyph = 1,
     DeleteFailure,

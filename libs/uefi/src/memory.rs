@@ -144,6 +144,9 @@ impl<'buf> Iterator for DescriptorIterator<'buf> {
         let (raw, buf) = self.buf.split_at(self.descriptor_size);
         self.buf = buf;
         let ptr = raw.as_ptr() as *const Descriptor;
+        /* SAFETY: Pointer is properly aligned and has at least
+         * size_of::<Descriptor>() bytes.
+         * This must be a valid Descriptor pointer, see new() function */
         unsafe { Some(&*ptr) }
     }
 }

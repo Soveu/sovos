@@ -4,18 +4,6 @@ pub struct Guid(u32, u16, u16, [u8; 8]);
 
 impl core::fmt::Debug for Guid {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        /*
-        let table_name: &'static str = match *self {
-            Self::MPS_TABLE => "MPS Table",
-            Self::EFI_ACPI_TABLE => "EFI ACPI Table",
-            Self::ACPI_TABLE => "ACPI Table",
-            Self::SMBIOS_TABLE => "SMBIOS Table",
-            Self::SMBIOS3_TABLE => "SMBIOS 3 Table",
-            Self::SAL_SYSTEM_TABLE => "SAL System Table",
-            _ => "",
-        };
-        */
-
         let table_name = self.as_str();
 
         if table_name == "Unknown" {
@@ -75,4 +63,7 @@ impl_guids! {
 
     EFI_DEBUG_IMAGE_INFO_TABLE =
         {0x49152E77,0x1ADA,0x4764, {0xB7,0xA2,0x7A,0xFE,0xFE,0xD9,0x5E,0x8B}},
+
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID =
+        {0x387477c2,0x69c7,0x11d2, {0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b}},
 }

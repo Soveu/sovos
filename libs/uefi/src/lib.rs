@@ -1,5 +1,7 @@
 #![no_std]
+
 #![feature(abi_efiapi)]
+#![feature(maybe_uninit_slice)]
 
 use core::mem::MaybeUninit;
 
@@ -10,6 +12,7 @@ pub mod memory;
 mod runtime_services;
 mod status;
 mod system_table;
+pub mod protocols;
 
 pub use boot_services::*;
 pub use guid::*;

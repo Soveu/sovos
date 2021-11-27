@@ -160,7 +160,7 @@ impl BootServices {
     pub fn get_memory_map<'buf>(
         &self,
         buf: &'buf mut [MaybeUninit<u64>],
-    ) -> Result<(memory::MapKey, memory::DescriptorIterator), Error> {
+    ) -> Result<(memory::MapKey, memory::DescriptorIterator<'buf>), Error> {
         let mut size: usize = core::mem::size_of_val(buf);
         let mut key = memory::MapKey(0xDEAD_BEEF);
         let mut descriptor_size = 0usize;
@@ -168,7 +168,7 @@ impl BootServices {
 
         let get_memory_map = self
             .get_memory_map
-            .expect("buggy UEFI: get_memory_map is null");
+            .expect("buggy UEFI: BootServices::get_memory_map is null");
         let status = (get_memory_map)(
             &mut size,
             buf.as_mut_ptr() as *mut memory::Descriptor,
@@ -177,39 +177,23 @@ impl BootServices {
             &mut descriptor_version,
         );
 
-        /*
-        assert_eq!(
-            descriptor_size,
-            core::mem::size_of::<memory::Descriptor>(),
-            "Memory descriptor size given by UEFI doesn't match MemoryDescriptor size",
-        );
-        */
+        //assert_eq!(descriptor_version, 1);
 
-        assert_eq!(status.get_efi_warning(), None);
-
-        if let Some(err) = status.get_efi_error() {
-            return Err(err);
-        }
-
-        assert_eq!(status.0, 0);
+        status.ok_or_expect_errors(&[
+            Error::InvalidParameter,
+            Error::BufferTooSmall,
+        ])?;
 
         let init_size = size / core::mem::size_of::<u64>();
-        let init_buffer: *mut [MaybeUninit<u64>] = &mut buf[..init_size];
-        let init_buffer = init_buffer as *mut [u64];
+        let init_buffer = &mut buf[..init_size];
 
-        unsafe {
-            let iter = memory::DescriptorIterator::new(&*init_buffer, descriptor_size);
-            return Ok((key, iter));
-        }
+        /* SAFETY: UEFI promised to initialize that piece of memory */
+        let init_buffer = unsafe { MaybeUninit::slice_assume_init_ref(init_buffer) };
+
+        let iter = memory::DescriptorIterator::new(init_buffer, descriptor_size);
+        return Ok((key, iter));
     }
 
-    /// Terminates boot services.
-    /// On success, loader owns all avaliable memory in the system.
-    /// Additionally, all memory marked as `memory::Type::BootServicesCode` or
-    /// `memory::Type::BootServicesData` can be treated as free memory.
-    /// Several fields of the EFI System Table should be set to 0, like `console_in_handle`,
-    /// `con_in` and similar and also `boot_services`. Also, since the table is changed CRC
-    /// checksum must be recomputed.
     pub unsafe fn exit_boot_services(
         &self,
         handle: ImageHandle,
@@ -217,16 +201,10 @@ impl BootServices {
     ) -> Result<(), Error> {
         let exit_bservices = self
             .exit_boot_services
-            .expect("buggy UEFI: exit_boot_services is null");
-        let status = (exit_bservices)(handle, key);
-
-        assert_eq!(status.get_efi_warning(), None);
-        if let Some(err) = status.get_efi_error() {
-            return Err(err);
-        }
-
-        assert_eq!(status.0, 0);
-        return Ok(());
+            .expect("buggy UEFI: BootServices::exit_boot_services is null");
+        return (exit_bservices)(handle, key).ok_or_expect_errors(&[
+            Error::InvalidParameter,
+        ]);
     }
 }
 

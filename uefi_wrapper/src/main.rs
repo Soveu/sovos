@@ -50,10 +50,10 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
-extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTable) -> uefi::RawStatus {
+extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
     cpu::disable_interrupts();
 
-    let st = unsafe { &*st };
+    let st = unsafe { &mut *st };
     let bootinfo = unsafe { &mut BOOTINFO };
     let mut out = unsafe { SerialPort::new(0x3F8) };
     static mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
@@ -61,8 +61,11 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *const uefi::SystemTa
 
     assert_eq!(st.verify(), Ok(()));
 
-    let boot_services = unsafe { &*st.boot_services.get() };
+    let boot_services = unsafe { st.boot_services.unwrap().as_ref() };
     //assert_eq!(boot_services.verify(), Ok(()));
+
+    let con_out = unsafe { st.con_out.unwrap().as_mut() };
+    assert_eq!(con_out.print_utf8("TEST\n👍\n"), Ok(()));
 
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);

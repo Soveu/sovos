@@ -12,4 +12,4 @@ uart_16550 = "0.2.15"
 cpu = { version = "*", path = "../libs/cpu" , features = ["ringzero"] }
 bootinfo = { version = "*", path = "../libs/bootinfo" }
 elf = { version = "*", path = "../libs/elf" }
-uefi = { version = "0.1", path = "../libs/uefi" }
+uefi = { version = "*", path = "../libs/uefi" }
