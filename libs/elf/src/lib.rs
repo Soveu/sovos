@@ -1,13 +1,12 @@
 #![no_std]
-
 #![feature(arbitrary_enum_discriminant)]
 
 mod definitions;
-pub use definitions::*;
-
-use bytemuck;
 use core::mem;
 use core::num::NonZeroU64;
+
+pub use definitions::*;
+use bytemuck;
 
 pub struct Elf<'a, M: ElfMachine> {
     pub data: &'a [u8],
@@ -25,12 +24,12 @@ pub trait ElfMachine {
 
 pub struct Amd64;
 impl ElfMachine for Amd64 {
-    const HEADER_SIZE: usize = EHSIZE_X64;
+    const ABIVERSION: u8 = 0;
     const CLASS: Class = Class::Bits64;
     const ENDIANESS: Data = Data::Lsb;
-    const OSABI: OsAbi = OsAbi::SystemV;
-    const ABIVERSION: u8 = 0;
+    const HEADER_SIZE: usize = EHSIZE_X64;
     const MACHINE: Machine = Machine::X64;
+    const OSABI: OsAbi = OsAbi::SystemV;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -58,7 +57,7 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
         data: &[u8],
         offset: Option<NonZeroU64>,
         n: usize,
-        entsize: usize
+        entsize: usize,
     ) -> Result<&[T], MemoryError>
     where
         T: bytemuck::Pod,
@@ -87,7 +86,9 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
 
         return match bytemuck::try_cast_slice(chunk) {
             Ok(x) => Ok(x),
-            Err(bytemuck::PodCastError::AlignmentMismatch) => Err(MemoryError::WrongAlignment),
+            Err(bytemuck::PodCastError::AlignmentMismatch) => {
+                Err(MemoryError::WrongAlignment)
+            },
             Err(_) => unreachable!(),
         };
     }
@@ -165,9 +166,6 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
             return Err(Error::UnsupportedVersion);
         }
 
-        return Ok(Self {
-            data: elf,
-            _phantom: core::marker::PhantomData,
-        });
+        return Ok(Self { data: elf, _phantom: core::marker::PhantomData });
     }
 }

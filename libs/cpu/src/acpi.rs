@@ -2,20 +2,20 @@ use core::{mem, ptr};
 
 #[repr(C, packed)]
 pub struct OldRsdp {
-    pub signature: [u8; 8],
-    pub checksum: u8,
-    pub oem_id: [u8; 6],
-    pub revision: u8,
+    pub signature:    [u8; 8],
+    pub checksum:     u8,
+    pub oem_id:       [u8; 6],
+    pub revision:     u8,
     pub rsdt_address: u32,
 }
 
 #[repr(C, packed)]
 pub struct Rsdp {
-    pub old: OldRsdp,
-    pub length: u32,
-    pub xsdt: *const SdtHeader,
+    pub old:          OldRsdp,
+    pub length:       u32,
+    pub xsdt:         *const SdtHeader,
     pub ext_checksum: u8,
-    pub _reserved: [u8; 3],
+    pub _reserved:    [u8; 3],
 }
 
 impl Rsdp {
@@ -27,20 +27,20 @@ impl Rsdp {
 
 #[repr(C, packed)]
 pub struct SdtHeader {
-    pub signature: [u8; 4],
-    pub length: u32,
-    pub revision: u8,
-    pub checksum: u8,
-    pub oem_id: [u8; 6],
-    pub oem_table_id: [u8; 8],
-    pub oem_revision: u32,
-    pub creator_id: u32,
+    pub signature:        [u8; 4],
+    pub length:           u32,
+    pub revision:         u8,
+    pub checksum:         u8,
+    pub oem_id:           [u8; 6],
+    pub oem_table_id:     [u8; 8],
+    pub oem_revision:     u32,
+    pub creator_id:       u32,
     pub creator_revision: u32,
 }
 
 #[repr(C)]
 pub struct Xsdt {
-    pub header: SdtHeader,
+    pub header:     SdtHeader,
     pub other_sdts: [u8],
 }
 

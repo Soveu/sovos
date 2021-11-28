@@ -12,8 +12,9 @@ pub struct TableHeader {
 
     /// The 32-bit CRC for the entire table. This value is computed by setting
     /// this field to 0, and computing the 32-bit CRC for HeaderSize bytes.
-    /// Note: Unless otherwise specified, UEFI uses a standard CCITT32 CRC algorithm with a seed
-    /// polynomial value of 0x04c11db7 for its CRC calculations.
+    /// Note: Unless otherwise specified, UEFI uses a standard CCITT32 CRC
+    /// algorithm with a seed polynomial value of 0x04c11db7 for its CRC
+    /// calculations.
     pub crc32: u32,
 
     /// Reserved field that must be set to 0.

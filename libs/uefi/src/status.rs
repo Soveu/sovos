@@ -7,7 +7,8 @@ impl RawStatus {
         const EFI_ERROR_BEGIN: usize = 0x8000_0000_0000_0000 + Error::LoadError as usize;
         const EFI_ERROR_END: usize = EFI_ERROR_BEGIN + Error::HttpError as usize;
 
-        const EFI_WARN_BEGIN: usize = 0x0000_0000_0000_0000 + Warning::UnknownGlyph as usize;
+        const EFI_WARN_BEGIN: usize =
+            0x0000_0000_0000_0000 + Warning::UnknownGlyph as usize;
         const EFI_WARN_END: usize = EFI_WARN_BEGIN + Warning::ResetRequired as usize;
 
         if self.0 == 0 {
@@ -30,14 +31,13 @@ impl RawStatus {
     }
 
     #[track_caller]
-    pub fn ok_or_expect_errors(
-        &self,
-        expected_errors: &[Error],
-    ) -> Result<(), Error> {
+    pub fn ok_or_expect_errors(&self, expected_errors: &[Error]) -> Result<(), Error> {
         let error = match self.get() {
             Err(e) => e,
             Ok(None) => return Ok(()),
-            Ok(Some(warn)) => panic!("This crate doesn't handle warnings, got {:?}", warn),
+            Ok(Some(warn)) => {
+                panic!("This crate doesn't handle warnings, got {:?}", warn)
+            },
         };
 
         if expected_errors.iter().any(|&err| err == error) {
@@ -46,8 +46,7 @@ impl RawStatus {
 
         panic!(
             "Invalid UEFI implementation - got Error::{:?}, expected one of {:?}",
-            error,
-            expected_errors,
+            error, expected_errors,
         );
     }
 }

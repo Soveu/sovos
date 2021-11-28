@@ -16,19 +16,17 @@ impl<T, const N: usize> MailboxBuffer<T, N> {
         /* SAFETY: the buffer can be uninitialized, because the element type
          * is MaybeUninit<T> */
         return unsafe {
-            Self {
-                buf: MaybeUninit::uninit().assume_init(),
-                len: AtomicIsize::new(0),
-            }
+            Self { buf: MaybeUninit::uninit().assume_init(), len: AtomicIsize::new(0) }
         };
     }
 
     pub(crate) fn try_push(&self, item: T) -> Option<T> {
         /* UNSAFETY: threads cannot push and pop at the same time */
-        /* SAFETY: because poping requires &mut self, having both it and &self
-         * at the same time is 'impossible', making this safe */
+        /* SAFETY: because poping requires &mut self, having both it and
+         * &self at the same time is 'impossible', making this safe */
 
-        /* Read and increment atomically, to ensure we are the only ones accessing an index */
+        /* Read and increment atomically, to ensure we are the only ones
+         * accessing an index */
         let oldlen = self.len.fetch_add(1, Ordering::SeqCst);
 
         /* Return if no place */
@@ -75,7 +73,7 @@ unsafe impl<T: Sync, const N: usize> Sync for MailboxBuffer<T, N> {}
 
 pub struct Mailbox<T, const N: usize> {
     /* FIXME: lots of false sharing here */
-    buffers: [UnsafeCell<MailboxBuffer<T, N>>; 2],
+    buffers:      [UnsafeCell<MailboxBuffer<T, N>>; 2],
     sender_count: [AtomicUsize; 2],
 
     send_buf: AtomicUsize,
@@ -84,12 +82,12 @@ pub struct Mailbox<T, const N: usize> {
 impl<T, const N: usize> Mailbox<T, N> {
     pub fn new() -> Self {
         Self {
-            buffers: [
+            buffers:      [
                 UnsafeCell::new(MailboxBuffer::new()),
                 UnsafeCell::new(MailboxBuffer::new()),
             ],
             sender_count: [AtomicUsize::new(0), AtomicUsize::new(0)],
-            send_buf: AtomicUsize::new(0),
+            send_buf:     AtomicUsize::new(0),
         }
     }
 
@@ -102,7 +100,8 @@ impl<T, const N: usize> Mailbox<T, N> {
             return self.try_push(item);
         }
 
-        /* SAFETY: we have just checked that we for sure do not push and pop at the same time */
+        /* SAFETY: we have just checked that we for sure do not push and pop
+         * at the same time */
         return unsafe {
             let buf = &*self.buffers[n].get();
             buf.try_push(item)

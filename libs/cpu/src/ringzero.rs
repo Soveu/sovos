@@ -2,9 +2,10 @@
 
 use crate::{impl_bits, paging, PhysAddr, VirtAddr};
 
-/// The processor halt instruction (HLT) halts instruction execution, leaving the processor in the
-/// halt state. No registers or machine state are modified as a result of executing the HLT
-/// instruction. The processor remains in the halt state until one of the following occurs:
+/// The processor halt instruction (HLT) halts instruction execution, leaving
+/// the processor in the halt state. No registers or machine state are modified
+/// as a result of executing the HLT instruction. The processor remains in the
+/// halt state until one of the following occurs:
 /// * A non-maskable interrupt (NMI).
 /// * An enabled, maskable interrupt (INTR).
 /// * Processor reset (RESET).
@@ -18,10 +19,11 @@ pub fn halt() {
 }
 
 /*
-/// The load segment-limit (LSL) instruction uses a segment-selector in the source operand to
-/// reference a descriptor in the GDT or LDT. LSL performs a set of preliminary access-rights
-/// checks and, if successful, loads the segment-descriptor limit field into the destination
-/// register. Software can use the limit value in comparisons with pointer offsets to prevent
+/// The load segment-limit (LSL) instruction uses a segment-selector in the
+/// source operand to reference a descriptor in the GDT or LDT.
+/// LSL performs a set of preliminary access-right checks and, if successful,
+/// loads the segment-descriptor limit field into the destination register.
+/// Software can use the limit value in comparisons with pointer offsets to prevent
 /// segment limit violations.
 #[inline(always)]
 pub fn load_segment_limit() {
@@ -83,13 +85,14 @@ pub unsafe fn invd() {
     asm!("invd", options(nostack, nomem));
 }
 
-/// The writeback and invalidate (WBINVD) and writeback no invalidate (WBNOINVD) instructions are
-/// used to write all modified cache lines to memory so that memory contains the most recent copy
-/// of data. After the writes are complete, the WBINVD instruction invalidates all cache lines,
-/// whereas the WBNOINVD instruction may leave the lines in the cache hierarchy in a non-modified
-/// state. These instructions operate on all caches in the memory hierarchy, including caches that
-/// are external to the processor. See the instructions' description in Volume 3 for further
-/// operational details
+/// The writeback and invalidate (WBINVD) and writeback no invalidate (WBNOINVD)
+/// instructions are used to write all modified cache lines to memory so that
+/// memory contains the most recent copy of data. After the writes are complete,
+/// the WBINVD instruction invalidates all cache lines, whereas the WBNOINVD
+/// instruction may leave the lines in the cache hierarchy in a non-modified
+/// state. These instructions operate on all caches in the memory hierarchy,
+/// including caches that are external to the processor. See the instructions'
+/// description in Volume 3 for further operational details
 #[inline(always)]
 pub fn wbinvd() {
     unsafe {
@@ -112,10 +115,11 @@ pub fn incssp() {
     }
 }
 
-/// The invalidate TLB entry (INVLPG) instruction can be used to invalidate specific entries within
-/// the TLB. The source operand is a virtual-memory address that specifies the TLB entry to be
-/// invalidated. Invalidating a TLB entry does not remove the associated page-table entry from the
-/// data cache. See “Translation-Lookaside Buffer (TLB)” on page 147 for more information.
+/// The invalidate TLB entry (INVLPG) instruction can be used to invalidate
+/// specific entries within the TLB. The source operand is a virtual-memory
+/// address that specifies the TLB entry to be invalidated. Invalidating a TLB
+/// entry does not remove the associated page-table entry from the data cache.
+/// See “Translation-Lookaside Buffer (TLB)” on page 147 for more information.
 #[inline(always)]
 pub fn invlpg() {
     unsafe {
@@ -123,9 +127,9 @@ pub fn invlpg() {
     }
 }
 
-/// The invalidate TLB entry in a Specified ASID instruction (INVLPGA) can be used to invalidate
-/// TLB entries associated with the specified ASID. See “Invalidate Page, Alternate ASID” on page
-/// 498
+/// The invalidate TLB entry in a Specified ASID instruction (INVLPGA) can be
+/// used to invalidate TLB entries associated with the specified ASID. See
+/// "Invalidate Page, Alternate ASID" on page 498
 #[inline(always)]
 pub fn invlpga() {
     unsafe {
@@ -133,9 +137,9 @@ pub fn invlpga() {
     }
 }
 
-/// The invalidate TLB with Broadcast instruction (INVLPGB) can be used to invalidate a specified
-/// range of TLB entries on the local processor and broadcast the invalidation to remote
-/// processors. See “INVLPGB” in Volume 3
+/// The invalidate TLB with Broadcast instruction (INVLPGB) can be used to
+/// invalidate a specified range of TLB entries on the local processor and
+/// broadcast the invalidation to remote processors. See "INVLPGB" in Volume 3
 #[inline(always)]
 pub fn invlpgb() {
     unsafe {
@@ -143,8 +147,9 @@ pub fn invlpgb() {
     }
 }
 
-/// The invalidate TLB entries in Specified PCID instruction (INVPCID) can be used to invalidate
-/// TLB entries of the specified Processor Context ID. See “INVPCID” in Volume 3.
+/// The invalidate TLB entries in Specified PCID instruction (INVPCID) can be
+/// used to invalidate TLB entries of the specified Processor Context ID. See
+/// “INVPCID” in Volume 3.
 #[inline(always)]
 pub fn invlpcid() {
     unsafe {
@@ -288,12 +293,15 @@ impl Cr3 {
     pub fn set_disable_cache(self) -> Self {
         Self(self.0 | (1 << 4))
     }
+
     pub fn set_writethrough(self) -> Self {
         Self(self.0 | (1 << 3))
     }
+
     pub fn clear_writethrough(self) -> Self {
         Self(self.0 & !(1 << 3))
     }
+
     pub fn clear_disable_cache(self) -> Self {
         Self(self.0 & !(1 << 4))
     }

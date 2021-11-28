@@ -8,6 +8,7 @@ impl Flags {
     pub const fn new() -> Self {
         Self(0)
     }
+
     pub const fn new_interrupt() -> Self {
         Self(0xE << 8)
     }
@@ -15,15 +16,19 @@ impl Flags {
     pub const fn set_present(self) -> Self {
         Self(self.0 | (1 << 15))
     }
+
     pub const fn clear_present(self) -> Self {
         Self(self.0 & !(1 << 15))
     }
+
     pub const fn enable_interrupts(self) -> Self {
         Self(self.0 | (1 << 8))
     }
+
     pub const fn disable_interrupts(self) -> Self {
         Self(self.0 & !(1 << 8))
     }
+
     pub const fn set_stack_index(self, i: u8) -> Self {
         let clear_index = self.0 & !0b111;
         Self(clear_index | i as u16)
@@ -33,23 +38,23 @@ impl Flags {
 #[derive(Clone, Copy)]
 #[repr(C, align(8))]
 pub struct Entry {
-    pub ptr_lower: u16,
+    pub ptr_lower:    u16,
     pub gdt_selector: u16,
-    pub flags: Flags,
-    pub ptr_mid: u16,
-    pub ptr_high: u32,
-    pub _reserved: u32,
+    pub flags:        Flags,
+    pub ptr_mid:      u16,
+    pub ptr_high:     u32,
+    pub _reserved:    u32,
 }
 
 impl Entry {
     pub const fn new() -> Self {
         Self {
-            ptr_lower: 0u16,
+            ptr_lower:    0u16,
             gdt_selector: 0u16,
-            flags: Flags::new(),
-            ptr_mid: 0u16,
-            ptr_high: 0u32,
-            _reserved: 0u32,
+            flags:        Flags::new(),
+            ptr_mid:      0u16,
+            ptr_high:     0u32,
+            _reserved:    0u32,
         }
     }
 
@@ -77,23 +82,22 @@ pub type Table = [Entry; 256];
 #[repr(C, packed)]
 pub struct TableRegister {
     limit: u16,
-    base: *const Table,
+    base:  *const Table,
 }
 
 impl TableRegister {
     pub fn read() -> Self {
-        let mut idtr = Self {
-            limit: 0,
-            base: core::ptr::null(),
-        };
+        let mut idtr = Self { limit: 0, base: core::ptr::null() };
         unsafe {
             asm!("sidt [{}]", in(reg) &mut idtr, options(nostack));
         }
         return idtr;
     }
+
     pub unsafe fn apply(&self) {
         asm!("lidt [{}]", in(reg) self, options(nostack, nomem));
     }
+
     pub fn new(table: &Table) -> Self {
         let limit: usize = core::mem::size_of_val(table) - 1;
         let limit = limit as u16;
@@ -112,8 +116,8 @@ pub struct SavedRegisters {
     pub rsi: u64,
     pub rdi: u64,
     pub rbp: u64,
-    pub r8: u64,
-    pub r9: u64,
+    pub r8:  u64,
+    pub r9:  u64,
     pub r10: u64,
     pub r11: u64,
     pub r12: u64,
@@ -124,23 +128,19 @@ pub struct SavedRegisters {
 
 #[repr(C)]
 pub struct Stack {
-    pub registers: SavedRegisters,
-    pub has_error_code: u64,
-    pub _error_code: u64,
+    pub registers:           SavedRegisters,
+    pub has_error_code:      u64,
+    pub _error_code:         u64,
     pub instruction_pointer: u64,
-    pub code_segment: u64,
-    pub flags: u64,
-    pub stack_pointer: u64,
-    pub stack_segment: u64,
+    pub code_segment:        u64,
+    pub flags:               u64,
+    pub stack_pointer:       u64,
+    pub stack_segment:       u64,
 }
 
 impl Stack {
     pub fn error_code(&self) -> Option<u64> {
-        if self.has_error_code == 0 {
-            None
-        } else {
-            Some(self._error_code)
-        }
+        if self.has_error_code == 0 { None } else { Some(self._error_code) }
     }
 }
 
@@ -176,14 +176,14 @@ pub macro make_handler($fnname:ident) {{
             asm!("
                 test sp, 15
                 jnz no_error_code
-    
+
                 push 1
                 jmp continue_to_handler
-    
+
             no_error_code:
                 push 0
                 push 0
-    
+
             continue_to_handler:
                 push r15
                 push r14
@@ -200,10 +200,10 @@ pub macro make_handler($fnname:ident) {{
                 push rcx
                 push rbx
                 push rax
-    
+
                 mov rdi, rsp
                 call {}
-    
+
                 pop rax
                 pop rbx
                 pop rcx
@@ -219,7 +219,7 @@ pub macro make_handler($fnname:ident) {{
                 pop r13
                 pop r14
                 pop r15
-    
+
                 iretq",
                 sym $fnname,
                 options(noreturn),

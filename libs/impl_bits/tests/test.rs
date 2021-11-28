@@ -15,6 +15,7 @@ impl Flags {
     pub const fn new() -> Self {
         Self(0)
     }
+
     pub const fn with_all_flags() -> Self {
         Self::__with_all_flags()
     }

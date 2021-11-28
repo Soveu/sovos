@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use bytemuck::{Pod, Zeroable};
 use core::num::NonZeroU64;
+
+use bytemuck::{Pod, Zeroable};
 
 pub const MAGIC: [u8; 4] = *b"\x7FELF";
 pub const EV_CURRENT: u8 = 1;
@@ -11,49 +12,49 @@ pub const EHSIZE_X64: usize = 64;
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct HeaderIdent {
-    pub ei_magic: [u8; 4],
-    pub ei_class: u8,
-    pub ei_data: u8,
-    pub ei_version: u8,
-    pub ei_osabi: u8,
+    pub ei_magic:      [u8; 4],
+    pub ei_class:      u8,
+    pub ei_data:       u8,
+    pub ei_version:    u8,
+    pub ei_osabi:      u8,
     pub ei_abiversion: u8,
-    pub ei_pad: [u8; 7],
+    pub ei_pad:        [u8; 7],
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct Header {
-    pub e_ident: HeaderIdent,
-    pub e_type: u16,
-    pub e_machine: u16,
-    pub e_version: u32,
-    pub e_entry: Option<NonZeroU64>,
-    pub e_phoff: Option<NonZeroU64>,
-    pub e_shoff: Option<NonZeroU64>,
-    pub e_flags: u32,
-    pub e_ehsize: u16,
+    pub e_ident:     HeaderIdent,
+    pub e_type:      u16,
+    pub e_machine:   u16,
+    pub e_version:   u32,
+    pub e_entry:     Option<NonZeroU64>,
+    pub e_phoff:     Option<NonZeroU64>,
+    pub e_shoff:     Option<NonZeroU64>,
+    pub e_flags:     u32,
+    pub e_ehsize:    u16,
     pub e_phentsize: u16,
-    pub e_phnum: u16,
+    pub e_phnum:     u16,
     pub e_shentsize: u16,
-    pub e_shnum: u16,
-    pub e_shstrndx: u16,
+    pub e_shnum:     u16,
+    pub e_shstrndx:  u16,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ProgramHeader {
-    pub p_type: u32,
-    pub p_flags: ProgramHeaderFlags,
+    pub p_type:   u32,
+    pub p_flags:  ProgramHeaderFlags,
     pub p_offset: u64,
-    pub p_vaddr: u64,
-
+    pub p_vaddr:  u64,
     /* Practical Binary Analysis says it should be zero, but readelf on some
      * binaries shows that it is equal to p_vaddr */
+
     pub p_paddr: u64,
 
     pub p_filesz: u64,
-    pub p_memsz: u64,
-    pub p_align: u64,
+    pub p_memsz:  u64,
+    pub p_align:  u64,
 }
 
 #[repr(transparent)]
@@ -66,21 +67,21 @@ pub struct SectionHeader {
     pub sh_name: u32,
     pub sh_type: u32,
 
-    pub sh_flags: u64,
-    pub sh_addr: u64,
+    pub sh_flags:  u64,
+    pub sh_addr:   u64,
     pub sh_offset: u64,
-    pub sh_size: u64,
+    pub sh_size:   u64,
 
-    pub sh_link: u32,
-    pub sh_info: u32,
+    pub sh_link:      u32,
+    pub sh_info:      u32,
     pub sh_addralign: u64,
-    pub sh_entsize: u64,
+    pub sh_entsize:   u64,
 }
 
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum SectionType {
-    Null = 0,
+    Null          = 0,
     Progbits,
     Symtab,
     Strtab,
@@ -89,11 +90,11 @@ pub enum SectionType {
     Dynamic,
     Note,
     Nobits,
-    Rel = 9,
+    Rel           = 9,
 
-    Dynsym = 11,
+    Dynsym        = 11,
 
-    InitArray = 14,
+    InitArray     = 14,
     FiniArray,
     PreinitArray,
     Group,
@@ -117,43 +118,43 @@ pub enum Data {
 #[repr(u16)]
 #[derive(Clone, Copy, Debug)]
 pub enum Type {
-    None = 0,
-    Relocatable = 1,
-    Executable = 2,
+    None         = 0,
+    Relocatable  = 1,
+    Executable   = 2,
     SharedObject = 3,
-    Core = 4,
+    Core         = 4,
 }
 
 #[repr(u16)]
 #[derive(Clone, Copy, Debug)]
 pub enum Machine {
-    None = 0,
+    None    = 0,
     PowerPC = 20,
     Power64 = 21,
-    Arm = 40,
-    X86 = 3,
-    X64 = 62,
+    Arm     = 40,
+    X86     = 3,
+    X64     = 62,
     AArch64 = 183,
-    AmdGpu = 224,
-    RiscV = 243,
+    AmdGpu  = 224,
+    RiscV   = 243,
 }
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 pub enum OsAbi {
-    SystemV = 0,      /* UNIX System V ABI */
-    Hpux = 1,         /* HP-UX */
-    NetBSD = 2,       /* NetBSD.  */
-    GnuLinux = 3,     /* Object uses GNU ELF extensions.  */
-    Solaris = 6,      /* Sun Solaris.  */
-    Aix = 7,          /* IBM AIX.  */
-    Irix = 8,         /* SGI Irix.  */
-    FreeBSD = 9,      /* FreeBSD.  */
-    Tru64 = 10,       /* Compaq TRU64 UNIX.  */
-    Modesto = 11,     /* Novell Modesto.  */
-    OpenBSD = 12,     /* OpenBSD.  */
-    ArmAEABI = 64,    /* ARM EABI */
-    Arm = 97,         /* ARM */
+    SystemV    = 0,   /* UNIX System V ABI */
+    Hpux       = 1,   /* HP-UX */
+    NetBSD     = 2,   /* NetBSD. */
+    GnuLinux   = 3,   /* Object uses GNU ELF extensions. */
+    Solaris    = 6,   /* Sun Solaris. */
+    Aix        = 7,   /* IBM AIX. */
+    Irix       = 8,   /* SGI Irix. */
+    FreeBSD    = 9,   /* FreeBSD. */
+    Tru64      = 10,  /* Compaq TRU64 UNIX. */
+    Modesto    = 11,  /* Novell Modesto. */
+    OpenBSD    = 12,  /* OpenBSD. */
+    ArmAEABI   = 64,  /* ARM EABI */
+    Arm        = 97,  /* ARM */
     Standalone = 255, /* Standalone (embedded) application */
 }
 
@@ -180,9 +181,11 @@ impl HeaderIdent {
     pub const fn class(&self) -> Option<Class> {
         Class::from_integer(self.ei_class)
     }
+
     pub const fn data(&self) -> Option<Data> {
         Data::from_integer(self.ei_class)
     }
+
     pub const fn osabi(&self) -> Option<OsAbi> {
         OsAbi::from_integer(self.ei_class)
     }
@@ -192,6 +195,7 @@ impl Header {
     pub const fn typ(&self) -> Option<Type> {
         Type::from_integer(self.e_type)
     }
+
     pub const fn machine(&self) -> Option<Machine> {
         Machine::from_integer(self.e_machine)
     }
@@ -207,15 +211,19 @@ impl ProgramHeaderFlags {
     pub fn is_executable(&self) -> bool {
         (self.0 >> 0) & 1 == 1
     }
+
     pub fn is_writable(&self) -> bool {
         (self.0 >> 1) & 1 == 1
     }
+
     pub fn is_readable(&self) -> bool {
         (self.0 >> 2) & 1 == 1
     }
+
     pub fn os_specific_flags(&self) -> u8 {
         (self.0 >> 20) as u8
     }
+
     pub fn cpu_specific_flags(&self) -> u8 {
         (self.0 >> 28) as u8
     }
@@ -335,7 +343,6 @@ impl OsAbi {
 
         return Some(osabi);
     }
-
 }
 impl SegmentType {
     pub const fn from_integer(x: u32) -> Option<Self> {
@@ -352,8 +359,8 @@ impl SegmentType {
             1685382481 => Self::OsSpecificGnuStack,
             1685382482 => Self::OsSpecificGnuRelro,
 
-            0x60000000..=0x6fffffff => Self::OsSpecific(x),
-            0x70000000..=0x7fffffff => Self::CpuSpecific(x),
+            0x60000000..=0x6FFFFFFF => Self::OsSpecific(x),
+            0x70000000..=0x7FFFFFFF => Self::CpuSpecific(x),
             _ => return None,
         };
 
@@ -380,8 +387,8 @@ impl core::fmt::Debug for ProgramHeaderFlags {
 impl core::fmt::Debug for ProgramHeader {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "ProgramHeader {{ type: {:?}, flags: {:?}, offset: 0x{:X}, \
-            vaddr: 0x{:X}, paddr: 0x{:X}, filesz: {}, memsz: {}, p_align: 0x{:X} }}",
+            "ProgramHeader {{ type: {:?}, flags: {:?}, offset: 0x{:X}, vaddr: 0x{:X}, \
+             paddr: 0x{:X}, filesz: {}, memsz: {}, p_align: 0x{:X} }}",
             SegmentType::from_integer(self.p_type),
             self.p_flags,
             self.p_offset,
@@ -397,9 +404,8 @@ impl core::fmt::Debug for ProgramHeader {
 impl core::fmt::Debug for SectionHeader {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "SectionHeader {{ name: {:?}, type: {:?}, flags: 0x{:X}, \
-            addr: 0x{:X}, offset: 0x{:X}, size: {}, link: {}, info: {}, \
-            addralign: {}, entsize: {} }}",
+            "SectionHeader {{ name: {:?}, type: {:?}, flags: 0x{:X}, addr: 0x{:X}, \
+             offset: 0x{:X}, size: {}, link: {}, info: {}, addralign: {}, entsize: {} }}",
             self.sh_name,
             SectionType::from_integer(self.sh_type),
             self.sh_flags,

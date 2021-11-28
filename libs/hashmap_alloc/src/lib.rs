@@ -10,8 +10,8 @@ pub type EntryPtr = NonNull<Entry>;
 
 #[repr(C)]
 pub struct Entry {
-    ptr: NonNull<Option<Entry>>,
-    bits: [u64; BUDDY_FACTOR / 64],
+    ptr:      NonNull<Option<Entry>>,
+    bits:     [u64; BUDDY_FACTOR / 64],
     bits_set: u16,
 
     next: Option<usize>,
@@ -20,8 +20,8 @@ pub struct Entry {
 
 #[repr(C)]
 pub struct Alloc {
-    shift: u8,
-    next: Option<usize>,
+    shift:   u8,
+    next:    Option<usize>,
     entries: [Option<Entry>; ENTRIES],
 }
 
@@ -45,19 +45,18 @@ impl Alloc {
         let mut bits = [0u64; BUDDY_FACTOR / 64];
         bits[index / 64] |= 1 << (index % 64);
 
-        *entry = Some(Entry {
-            ptr,
-            bits,
-            bits_set: 1,
-            next: None,
-            prev: None,
-        });
+        *entry = Some(Entry { ptr, bits, bits_set: 1, next: None, prev: None });
 
         return None;
     }
 
-    pub unsafe fn push(&mut self, new: NonNull<Option<Entry>>) -> Option<NonNull<BigBlock>> {
-        unsafe { new.as_ptr().write(None); }
+    pub unsafe fn push(
+        &mut self,
+        new: NonNull<Option<Entry>>,
+    ) -> Option<NonNull<BigBlock>> {
+        unsafe {
+            new.as_ptr().write(None);
+        }
 
         let table_index = new.as_ptr() as usize;
         let table_index = (table_index >> self.shift) % self.entries.len();
@@ -69,7 +68,8 @@ impl Alloc {
                 None => return None,
             };
 
-            let buddy_a = (unwrapped_entry.ptr.as_ptr() as usize) >> (self.shift + BUDDY_SHIFT);
+            let buddy_a =
+                (unwrapped_entry.ptr.as_ptr() as usize) >> (self.shift + BUDDY_SHIFT);
             let buddy_b = (new.as_ptr() as usize) >> (self.shift + BUDDY_SHIFT);
 
             if buddy_a == buddy_b {

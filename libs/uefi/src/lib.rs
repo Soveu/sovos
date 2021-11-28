@@ -1,5 +1,4 @@
 #![no_std]
-
 #![feature(abi_efiapi)]
 #![feature(maybe_uninit_slice)]
 
@@ -9,10 +8,10 @@ mod boot_services;
 mod guid;
 mod header;
 pub mod memory;
+pub mod protocols;
 mod runtime_services;
 mod status;
 mod system_table;
-pub mod protocols;
 
 pub use boot_services::*;
 pub use guid::*;
@@ -25,7 +24,8 @@ pub use system_table::*;
 pub const SPECIFICATION_VERSION: Revision = Revision::new(2, 70);
 
 /// A type that can be used to check whether `efi_main` has good signature
-pub type EfiImageEntryPointFunc = extern "efiapi" fn(ImageHandle, *const SystemTable) -> RawStatus;
+pub type EfiImageEntryPointFunc =
+    extern "efiapi" fn(ImageHandle, *const SystemTable) -> RawStatus;
 
 /// A handle given by UEFI in `efi_main`
 #[repr(transparent)]
@@ -37,7 +37,7 @@ pub struct Handle(usize);
 #[derive(Debug)]
 #[repr(C)]
 pub struct Config {
-    pub guid: Guid,
+    pub guid:  Guid,
     pub table: usize,
 }
 
@@ -51,6 +51,7 @@ impl Revision {
         let upper = upper as u32;
         Self(upper << 16 | lower)
     }
+
     pub const fn as_tuple(self) -> (u16, u16) {
         let lower = (self.0 >> 0) as u16;
         let upper = (self.0 >> 16) as u16;

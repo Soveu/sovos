@@ -1,6 +1,7 @@
-use super::Ring;
 //use core::convert::TryInto;
 use core::ptr;
+
+use super::Ring;
 
 pub enum TableIndicator {
     GDT = 0,
@@ -14,6 +15,7 @@ impl SegmentSelector {
     pub fn index(&self) -> u16 {
         self.0 >> 3
     }
+
     pub fn table_indicator(&self) -> TableIndicator {
         match (self.0 >> 2) & 1 {
             0 => TableIndicator::GDT,
@@ -21,6 +23,7 @@ impl SegmentSelector {
             _ => unreachable!(),
         }
     }
+
     pub fn requested_privilege_level(&self) -> Ring {
         match (self.0 >> 12) & 0b11 {
             0 => Ring::Zero,
@@ -75,6 +78,7 @@ impl GlobalDescriptorTable {
     pub const fn new() -> Self {
         /* .. .. 10011011_00000000 00000000_1010_1111 */
         /* 0x0020_9A00_0000_0000 */
+        #[rustfmt::skip]
         let code: u64 = 0
             | (1 << 40) // accessed
             | (1 << 41) // read
@@ -85,6 +89,7 @@ impl GlobalDescriptorTable {
             | (1 << 53); // long mode
 
         /* Just present + data bit */
+        #[rustfmt::skip]
         let data: u64 = 0
             | (1 << 40) // accessed
             | (1 << 41) // writable
@@ -102,15 +107,12 @@ impl GlobalDescriptorTable {
 #[repr(C, packed)]
 pub struct GDTR {
     limit: u16,
-    base: *const GlobalDescriptorTable,
+    base:  *const GlobalDescriptorTable,
 }
 
 impl GDTR {
     pub fn read() -> Self {
-        let mut gdtr = Self {
-            limit: 0,
-            base: ptr::null(),
-        };
+        let mut gdtr = Self { limit: 0, base: ptr::null() };
         unsafe {
             asm!("sgdt [{}]", in(reg) &mut gdtr, options(nostack));
         }
@@ -132,6 +134,7 @@ impl GDTR {
             core::slice::from_raw_parts(base as *const _, limit)
         };
     }
+
     pub fn new(table: &GlobalDescriptorTable) -> Self {
         let limit: usize = core::mem::size_of::<GlobalDescriptorTable>() - 1;
         let limit = limit as u16;

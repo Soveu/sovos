@@ -39,9 +39,9 @@ pub use ringzero::*;
 
 #[derive(Clone, Copy)]
 pub enum Ring {
-    Zero = 0,
-    One = 1,
-    Two = 2,
+    Zero  = 0,
+    One   = 1,
+    Two   = 2,
     Three = 3,
 }
 
@@ -72,6 +72,7 @@ impl Eflags {
     pub const fn new() -> Self {
         Self(2u32)
     }
+
     pub fn io_privilege(self) -> Ring {
         match (self.0 >> 12) & 0b11 {
             0 => Ring::Zero,

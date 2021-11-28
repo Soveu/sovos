@@ -79,10 +79,12 @@ pub enum Type {
     Mmio,
     MmioPortSpace,
 
-    /// Address space reserved by the firmware for code that is part of the processor.
+    /// Address space reserved by the firmware for code that is part of the
+    /// processor.
     PalCode,
 
-    /// A memory region that operates as EfiConventionalMemory. However, it happens to also support byte-addressable non-volatility.
+    /// A memory region that operates as EfiConventionalMemory. However, it
+    /// happens to also support byte-addressable non-volatility.
     Persistent,
 }
 
@@ -112,7 +114,7 @@ impl Type {
 }
 
 pub struct DescriptorIterator<'buf> {
-    buf: &'buf [u64],
+    buf:             &'buf [u64],
     descriptor_size: usize,
 }
 
@@ -127,15 +129,13 @@ impl<'buf> DescriptorIterator<'buf> {
         assert_eq!(descriptor_size % 8, 0);
         let descriptor_size = descriptor_size / 8;
 
-        Self {
-            buf,
-            descriptor_size,
-        }
+        Self { buf, descriptor_size }
     }
 }
 
 impl<'buf> Iterator for DescriptorIterator<'buf> {
     type Item = &'buf Descriptor;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.buf.len() < self.descriptor_size {
             return None;

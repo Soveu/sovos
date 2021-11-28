@@ -1,16 +1,16 @@
 use crate::*;
 
 macro_rules! uefi_fn_ptr {
-    ($($arg:tt)*) => { Option<unsafe extern "efiapi" fn($($arg)*) -> RawStatus> }
+    ($($arg:tt)*) => { Option<unsafe extern "efiapi" fn($($arg)*) -> RawStatus> };
 }
 
 #[repr(C)]
 pub struct SimpleTextOutputMode {
-    pub max_mode: i32,
-    pub mode: i32,
-    pub attribute: i32,
-    pub cursor_column: i32,
-    pub cursor_row: i32,
+    pub max_mode:       i32,
+    pub mode:           i32,
+    pub attribute:      i32,
+    pub cursor_column:  i32,
+    pub cursor_row:     i32,
     pub cursor_visible: i32,
 }
 
@@ -24,15 +24,15 @@ pub struct SimpleTextOutput {
     ///
     /// ## Description
     ///
-    /// The Reset() function resets the text output device hardware. 
+    /// The Reset() function resets the text output device hardware.
     /// The cursor position is set to (0, 0), and the screen is cleared to
     /// the default background color for the output device.
     /// As part of initialization process, the firmware/device will make a quick
     /// but reasonable attempt to verify that the device is functioning.
-    /// If the ExtendedVerification flag is TRUE the firmware may take an extended
-    /// amount of time to verify the device is operating on reset.
+    /// If the ExtendedVerification flag is TRUE the firmware may take an
+    /// extended amount of time to verify the device is operating on reset.
     /// Otherwise the reset operation is to occur as quickly as possible.
-    /// The hardware verification process is not defined by this specification 
+    /// The hardware verification process is not defined by this specification
     /// and is left up to the platform firmware or driver to implement.
     pub reset: uefi_fn_ptr!(this: &mut Self, extended_verification: bool),
 
@@ -40,7 +40,7 @@ pub struct SimpleTextOutput {
     ///
     /// * `this` - A pointer to the `SimpleTextOutputProtocol` instance.
     /// * `string` - The Null-terminated string to be displayed on the output device(s).
-    ///   All output devices must also support the Unicode drawing character codes 
+    ///   All output devices must also support the Unicode drawing character codes
     ///   defined in "Related Definitions."
     pub output_string: uefi_fn_ptr!(this: &mut Self, string: *const u16),
 
@@ -48,25 +48,25 @@ pub struct SimpleTextOutput {
     ///
     /// * `this` - A pointer to the `SimpleTextOutputProtocol` instance.
     /// * `string` - The Null-terminated string to be displayed on the output device(s).
-    ///   All output devices must also support the Unicode drawing character codes 
+    ///   All output devices must also support the Unicode drawing character codes
     ///   defined in “Related Definitions.”
     ///
     /// # Description
-    /// 
+    ///
     /// The TestString() function verifies that all characters in a string
     /// can be output to the target device. This function provides a way to
     /// know if the desired character codes are supported for rendering on the
     /// output device(s). This allows the installation procedure (or EFI image)
     /// to at least select character codes that the output devices are capable
     /// of displaying. Since the output device(s) may be changed between boots,
-    /// if the loader cannot adapt to such changes it is recommended that the 
-    /// loader call OutputString() with the text it has and ignore any 
+    /// if the loader cannot adapt to such changes it is recommended that the
+    /// loader call OutputString() with the text it has and ignore any
     /// "unsupported" error codes. Devices that are capable of displaying the
     /// Unicode character codes will do so.
     pub test_string: uefi_fn_ptr!(this: &Self, string: *const u16),
 
-    pub query_mode: usize,
-    pub set_mode: usize,
+    pub query_mode:    usize,
+    pub set_mode:      usize,
     pub set_attribute: usize,
 
     /// # Parameters
@@ -76,18 +76,19 @@ pub struct SimpleTextOutput {
     /// # Description
     ///
     /// The ClearScreen() function clears the output device(s) display to the
-    /// currently selected background color. The cursor position is set to (0, 0)
+    /// currently selected background color. The cursor position is set to (0,
+    /// 0)
     pub clear_screen: uefi_fn_ptr!(this: &mut Self),
 
     pub set_cursor_position: usize,
-    pub enable_cursor: usize,
+    pub enable_cursor:       usize,
 
     pub mode: *const SimpleTextOutputMode,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum Verification {
-    None = 0,
+    None     = 0,
     Extended = 1,
 }
 
@@ -102,30 +103,24 @@ impl Verification {
 
 impl SimpleTextOutput {
     pub fn reset(&mut self, ver: Verification) -> Result<(), Error> {
-        let f = self.reset
-            .expect("buggy UEFI: SimpleTextOutput::reset is null");
+        let f = self.reset.expect("buggy UEFI: SimpleTextOutput::reset is null");
         let result = unsafe { (f)(self, ver.to_bool()) };
-        return result.ok_or_expect_errors(&[
-            Error::DeviceError,
-        ]);
+        return result.ok_or_expect_errors(&[Error::DeviceError]);
     }
 
     unsafe fn test_raw_utf16(&self, s: *const u16) -> Result<(), Error> {
-        let f = self.test_string
-            .expect("buggy UEFI: SimpleTextOutput::test_string is null");
+        let f =
+            self.test_string.expect("buggy UEFI: SimpleTextOutput::test_string is null");
         let result = (f)(self, s);
-        return result.ok_or_expect_errors(&[
-            Error::Unsupported,
-        ]);
+        return result.ok_or_expect_errors(&[Error::Unsupported]);
     }
+
     unsafe fn print_raw_utf16(&mut self, s: *const u16) -> Result<(), Error> {
-        let f = self.output_string
+        let f = self
+            .output_string
             .expect("buggy UEFI: SimpleTextOutput::output_string is null");
         let result = (f)(self, s);
-        return result.ok_or_expect_errors(&[
-            Error::Unsupported,
-            Error::DeviceError,
-        ]);
+        return result.ok_or_expect_errors(&[Error::Unsupported, Error::DeviceError]);
     }
 
     pub fn print_utf8(&mut self, s: &str) -> Result<(), Error> {
@@ -147,11 +142,7 @@ impl SimpleTextOutput {
                 i += 1;
             }
 
-            utf16_buf[i] = if c as u32 > u16::MAX as u32 {
-                '?' as u16
-            } else {
-                c as u16
-            };
+            utf16_buf[i] = if c as u32 > u16::MAX as u32 { '?' as u16 } else { c as u16 };
 
             i += 1;
         }

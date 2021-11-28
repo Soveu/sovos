@@ -7,11 +7,11 @@
 #chain_width = 60
 #single_line_if_else_max_width = 50
 
-max_width = 80
+max_width = 90
 use_small_heuristics = "Max"
 enum_discrim_align_threshold = 80
-struct_variant_width = 70 # is this affected by use_small_heuristics?
-comment_width = 0
+struct_variant_width = 80 # is this affected by use_small_heuristics?
+comment_width = 90
 
 
 # STABLE OPTIONS ---------------------------------
@@ -66,7 +66,7 @@ indent_style = "Block" # what is the difference for control flow?
 
 inline_attribute_width = 0
 license_template_path = ""
-match_arm_block = true
+match_arm_blocks = true
 imports_granularity = "Module"
 normalize_comments = false
 normalize_doc_attributes = false

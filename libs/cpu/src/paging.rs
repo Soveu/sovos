@@ -146,6 +146,7 @@ impl<E: Entry> Table<E> {
 
 impl<E: Entry> core::ops::Index<usize> for Table<E> {
     type Output = E;
+
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
     }

@@ -19,12 +19,8 @@ impl<'a> Iterator for TextIterator<'a> {
             .expect("smbios::TextIterator - can't find null terminator");
 
         /* SAFETY: n must be in range [0, slice.len()) */
-        let (text, rest) = unsafe {
-            (
-                self.slice.get_unchecked(..n),
-                self.slice.get_unchecked(n + 1..),
-            )
-        };
+        let (text, rest) =
+            unsafe { (self.slice.get_unchecked(..n), self.slice.get_unchecked(n + 1..)) };
 
         if text.len() == 0 {
             return None;
