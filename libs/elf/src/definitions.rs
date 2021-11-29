@@ -116,7 +116,7 @@ pub enum Data {
 }
 
 #[repr(u16)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
     None         = 0,
     Relocatable  = 1,
@@ -126,7 +126,7 @@ pub enum Type {
 }
 
 #[repr(u16)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Machine {
     None    = 0,
     PowerPC = 20,
@@ -140,7 +140,7 @@ pub enum Machine {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OsAbi {
     SystemV    = 0,   /* UNIX System V ABI */
     Hpux       = 1,   /* HP-UX */

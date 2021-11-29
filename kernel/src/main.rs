@@ -19,22 +19,38 @@ static mut ZEROED: [u8; 1 << 18] = [0u8; 1 << 18];
 #[naked]
 pub unsafe extern "sysv64" fn _start() -> ! {
     asm!("
+        # Check if there is an additional value from the interrupt
         test sp, 15
         jnz 1f
 
         pop rax
 
     1:
-        pop rax // pop the old ip
-        pop rax // pop the code segment
-        pop rbx // pop flags
+        # Pop the old ip
+        pop rax
 
+        # Pop the code segment
+        pop rax
+
+        # Pop flags
+        pop rbx
+
+        # Clear all the flags
         xor rbx, rbx
         push rbx
-        push rax
-        push qword ptr {}
 
-        iretq",
+        # Push the previous code segment
+        push rax
+
+        # Well, x86 needs that special rip + SYMBOL notation for PIC
+        # What it really means is just `lea rbx [SYMBOL]`, but in a position-
+        # independent fashion
+        lea rbx, [rip + {}]
+        push rbx
+
+        # This kernel should be jumped into via page fault
+        iretq
+        ",
         sym kmain,
         options(noreturn),
     )

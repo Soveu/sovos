@@ -37,9 +37,37 @@
 
   "pre-link-args": {
     "ld.lld": [
-      "-z", "noexecstack",
-      "-z", "common-page-size=2097152",
-      "-z", "max-page-size=2097152"
+      "--static",
+      "--build-id=fast",
+      "--entry=_start",
+      "--no-dynamic-linker",
+      "--nostdlib",
+      "--warn-unresolved-symbols",
+      "--fatal-warnings",
+      "--unresolved-symbols=report-all",
+      "--error-unresolved-symbols",
+      "--no-eh-frame-hdr",
+      "--error-limit=0",
+      "--no-undefined-version",
+      "--no-undefined",
+      "--pic-executable",
+
+      "-znognustack",
+      "-zseparate-code",
+      "-zshstk",
+      "-ztext",
+      "-zcommon-page-size=2097152",
+      "-zmax-page-size=2097152",
+
+      "-zrelro",
+      "-znoexecstack"
+    ],
+    "ld": [
+      "--orphan-handling=error",
+
+      "--strip-discarded",
+      "-z", "x86-64-v2",
+      "--disable-stdcall-fixup"
     ]
   }
 }

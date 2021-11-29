@@ -156,9 +156,6 @@ impl<'a, M: ElfMachine> Elf<'a, M> {
         };
         let header: &Header = bytemuck::from_bytes(header);
 
-        if header.e_type != Type::Executable as u16 {
-            return Err(Error::NotExec);
-        }
         if header.e_machine != M::MACHINE as u16 {
             return Err(Error::WrongMachine);
         }
