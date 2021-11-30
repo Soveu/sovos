@@ -172,6 +172,7 @@ pub enum SegmentType {
 
     OsSpecificGnuStack = 1685382481,
     OsSpecificGnuRelro = 1685382482,
+    OsSpecificGnuProperty= 1685382483,
 
     OsSpecific(u32),
     CpuSpecific(u32),
@@ -358,6 +359,7 @@ impl SegmentType {
 
             1685382481 => Self::OsSpecificGnuStack,
             1685382482 => Self::OsSpecificGnuRelro,
+            1685382483 => Self::OsSpecificGnuProperty,
 
             0x60000000..=0x6FFFFFFF => Self::OsSpecific(x),
             0x70000000..=0x7FFFFFFF => Self::CpuSpecific(x),

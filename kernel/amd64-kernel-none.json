@@ -37,12 +37,14 @@
 
   "pre-link-args": {
     "ld.lld": [
+      "--image-base=0",
+      "--defsym=__KERNEL_BASE=0",
+
       "--static",
       "--build-id=fast",
       "--entry=_start",
       "--no-dynamic-linker",
       "--nostdlib",
-      "--warn-unresolved-symbols",
       "--fatal-warnings",
       "--unresolved-symbols=report-all",
       "--error-unresolved-symbols",
