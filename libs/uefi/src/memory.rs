@@ -38,13 +38,16 @@ pub struct Descriptor {
 
 impl core::fmt::Debug for Descriptor {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct("Descriptor")
-            .field("typ", &self.memory_type())
-            .field("phys_start", &self.phys_start)
-            .field("virt_start", &self.virt_start)
-            .field("pages", &self.pages)
-            .field("attributes", &self.attributes)
-            .finish()
+        f.write_fmt(format_args!(
+            "Descriptor {{ phys_start: {:016X}, virt_start: {:016X}, pages: {}, \
+            attributes: {:?}, type: {:?} }}",
+
+            self.phys_start,
+            self.virt_start,
+            self.pages,
+            self.attributes,
+            self.memory_type(),
+        ))
     }
 }
 

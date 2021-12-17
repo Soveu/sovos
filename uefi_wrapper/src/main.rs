@@ -98,17 +98,29 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
     assert_eq!(ok, Ok(()));
 
+    let mut addr = 0;
+    let mut len = 0;
     for map in memmap {
         use uefi::memory::Type;
 
         let mtyp = Type::from_int(map.typ);
 
-        if mtyp == Some(Type::BootServicesCode) || mtyp == Some(Type::BootServicesData) {
-            continue;
+        if mtyp == Some(Type::BootServicesCode)
+            || mtyp == Some(Type::BootServicesData)
+            || mtyp == Some(Type::Conventional)
+        {
+            if map.phys_start == addr + len {
+                len += map.pages * 4096;
+            } else {
+                brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
+                addr = map.phys_start;
+                len = map.pages * 4096;
+            }
         }
 
         brint!(out, "\t{:?}\n", map);
     }
+    brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
 
     let cr4 = cpu::Cr4::get();
     let cr0 = cpu::Cr0::get();
@@ -148,12 +160,13 @@ fn prepare_kernel_elf(out: &mut SerialPort) {
     let pheaders = kernelelf.program_headers().unwrap();
     let sheaders = kernelelf.section_headers().unwrap();
 
-    brint!(out, "{:?} {:?} {:?} {:?} {:?}\n",
+    brint!(out, "{:?} {:?} {:?} {:?} {:?} 0x{:X}\n",
         kernelelf.header().machine(),
         kernelelf.header().typ(),
         kernelelf.header().e_ident.osabi(),
         kernelelf.header().e_ident.class(),
         kernelelf.header().e_ident.data(),
+        kernelelf.header().e_entry.unwrap(),
     );
     brint!(out, "Program headers: {:#?}\n", pheaders);
     brint!(out, "Section headers: {:#?}\n", sheaders);

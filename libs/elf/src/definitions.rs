@@ -361,8 +361,8 @@ impl SegmentType {
             1685382482 => Self::OsSpecificGnuRelro,
             1685382483 => Self::OsSpecificGnuProperty,
 
-            0x60000000..=0x6FFFFFFF => Self::OsSpecific(x),
-            0x70000000..=0x7FFFFFFF => Self::CpuSpecific(x),
+            0x6000_0000..=0x6FFF_FFFF => Self::OsSpecific(x),
+            0x7000_0000..=0x7FFF_FFFF => Self::CpuSpecific(x),
             _ => return None,
         };
 
@@ -389,16 +389,18 @@ impl core::fmt::Debug for ProgramHeaderFlags {
 impl core::fmt::Debug for ProgramHeader {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "ProgramHeader {{ type: {:?}, flags: {:?}, offset: 0x{:X}, vaddr: 0x{:X}, \
-             paddr: 0x{:X}, filesz: {}, memsz: {}, p_align: 0x{:X} }}",
-            SegmentType::from_integer(self.p_type),
-            self.p_flags,
+            "ProgramHeader {{ offset: 0x{:016X}, vaddr: 0x{:016X}, \
+            paddr: 0x{:016X}, filesz: {}, memsz: {}, p_align: 0x{:016X}, \
+            type: {:?}, flags: {:?} }}",
+
             self.p_offset,
             self.p_vaddr,
             self.p_paddr,
             self.p_filesz,
             self.p_memsz,
             self.p_align,
+            SegmentType::from_integer(self.p_type),
+            self.p_flags,
         ))
     }
 }
@@ -406,10 +408,10 @@ impl core::fmt::Debug for ProgramHeader {
 impl core::fmt::Debug for SectionHeader {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "SectionHeader {{ name: {:?}, type: {:?}, flags: 0x{:X}, addr: 0x{:X}, \
-             offset: 0x{:X}, size: {}, link: {}, info: {}, addralign: {}, entsize: {} }}",
-            self.sh_name,
-            SectionType::from_integer(self.sh_type),
+            "SectionHeader {{ flags: 0x{:08X}, addr: 0x{:016X}, \
+            offset: 0x{:016X}, size: {}, link: {}, info: {}, addralign: {}, \
+            entsize: {}, name: {:?}, type: {:?} }}",
+
             self.sh_flags,
             self.sh_addr,
             self.sh_offset,
@@ -418,6 +420,8 @@ impl core::fmt::Debug for SectionHeader {
             self.sh_info,
             self.sh_addralign,
             self.sh_entsize,
+            self.sh_name,
+            SectionType::from_integer(self.sh_type),
         ))
     }
 }

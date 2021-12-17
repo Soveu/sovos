@@ -39,24 +39,22 @@
     "ld.lld": [
       "--image-base=0",
       "--defsym=__KERNEL_BASE=0",
-
-      "--static",
-      "--build-id=fast",
       "--entry=_start",
+      "--static",
       "--no-dynamic-linker",
       "--nostdlib",
+      "--no-eh-frame-hdr",
+      "--pic-executable",
+
       "--fatal-warnings",
       "--unresolved-symbols=report-all",
       "--error-unresolved-symbols",
-      "--no-eh-frame-hdr",
       "--error-limit=0",
       "--no-undefined-version",
       "--no-undefined",
-      "--pic-executable",
 
+      "-zcombreloc",
       "-znognustack",
-      "-zseparate-code",
-      "-zshstk",
       "-ztext",
       "-zcommon-page-size=2097152",
       "-zmax-page-size=2097152",
@@ -66,6 +64,9 @@
     ],
     "ld": [
       "--orphan-handling=error",
+      "--build-id=fast",
+      "-zshstk",
+      "-zseparate-code",
 
       "--strip-discarded",
       "-z", "x86-64-v2",

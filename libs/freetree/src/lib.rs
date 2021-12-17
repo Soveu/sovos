@@ -2,11 +2,11 @@
 
 //use core::ptr::NonNull;
 
-pub const B: usize = 14;
+pub const B: usize = 32;
 const PTR_EQ_MASK: usize = !0x1FFFFF;
 
 type BigNode = Node;
-type Bits = [u64; 8];
+type Bits = u8;
 
 struct Node {
     /// Length of `nodes` and `bits` array. In the future it might be encoded

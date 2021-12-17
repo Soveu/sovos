@@ -12,9 +12,8 @@ fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-static STR: [u8; 13] = *b"ayyyyyyyyyyyy";
-static mut MUT: [u8; 1 << 18] = [b'a'; 1 << 18];
-static mut ZEROED: [u8; 1 << 18] = [0u8; 1 << 18];
+static STR: [u8; 12] = *b"Hello World!";
+static mut MUT: [u8; 11] = *b"This is MUT";
 
 #[no_mangle]
 #[naked]
@@ -61,29 +60,11 @@ pub unsafe extern "sysv64" fn _start() -> ! {
     )
 }
 
-extern {
-    type LinkerSymbol;
-}
-
-impl LinkerSymbol {
-    fn as_ptr(&'static self) -> *const u8 {
-        self as *const Self as *const u8
-    }
-}
-
-extern "C" {
-    static __KERNEL_BASE: LinkerSymbol;
-}
-
 extern "sysv64" fn kmain() -> ! {
     unsafe {
-        let mut base = __KERNEL_BASE.as_ptr();
-        asm!("mov rax, rax", inout("rax") base, options(nostack, nomem));
-
-        core::hint::black_box(&STR);
+        asm!("xchg rax, rax", in("rax") &STR, options(nostack, nomem));
         MUT[0] = b'b';
-        core::hint::black_box(&mut MUT);
-        core::hint::black_box(&mut ZEROED);
+        asm!("xchg rax, rax", in("rax") &MUT, options(nostack, nomem));
     }
 
     loop {

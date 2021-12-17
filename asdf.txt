@@ -1,0 +1,150 @@
+Free memory addr=0000000000000000 len=640kb
+Descriptor { phys_start: 0000000000800000, virt_start: 0000000000000000, pages: 8, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+Free memory addr=0000000000100000 len=7168kb
+Descriptor { phys_start: 0000000000810000, virt_start: 0000000000000000, pages: 240, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+Free memory addr=0000000000808000 len=32kb
+Descriptor { phys_start: 00000000BF8EF000, virt_start: 0000000000000000, pages: 256, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesData) }
+Descriptor { phys_start: 00000000BF9EF000, virt_start: 0000000000000000, pages: 256, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesCode) }
+Descriptor { phys_start: 00000000BFAEF000, virt_start: 0000000000000000, pages: 128, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Reserved) }
+Descriptor { phys_start: 00000000BFB6F000, virt_start: 0000000000000000, pages: 16, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiReclaim) }
+Descriptor { phys_start: 00000000BFB7F000, virt_start: 0000000000000000, pages: 128, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+Free memory addr=0000000000900000 len=3129276kb
+Descriptor { phys_start: 00000000BFF58000, virt_start: 0000000000000000, pages: 32, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesData) }
+Descriptor { phys_start: 00000000BFF78000, virt_start: 0000000000000000, pages: 136, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+Free memory addr=00000000BFBFF000 len=3428kb
+Descriptor { phys_start: 0000000140000000, virt_start: 0000000000000000, pages: 26, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(LoaderCode) }
+Free memory addr=0000000100000000 len=1048576kb
+Free memory addr=000000014001A000 len=4194200kb
+
+
+
+
+Descriptor { phys_start: 0000000000000000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 0000000000001000, virt_start: 0000000000000000, pages: 159, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Free memory addr=0000000000000000 len=640kb
+
+Descriptor { phys_start: 0000000000100000, virt_start: 0000000000000000, pages: 1792, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Free memory addr=0000000000100000 len=7168kb
+
+Descriptor { phys_start: 0000000000800000, virt_start: 0000000000000000, pages: 8, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+
+Descriptor { phys_start: 0000000000808000, virt_start: 0000000000000000, pages: 8, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Free memory addr=0000000000808000 len=32kb
+
+Descriptor { phys_start: 0000000000810000, virt_start: 0000000000000000, pages: 240, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+
+Descriptor { phys_start: 0000000000900000, virt_start: 0000000000000000, pages: 3072, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 0000000001500000, virt_start: 0000000000000000, pages: 764470, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Descriptor { phys_start: 00000000BBF36000, virt_start: 0000000000000000, pages: 32, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BBF56000, virt_start: 0000000000000000, pages: 8595, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Descriptor { phys_start: 00000000BE0E9000, virt_start: 0000000000000000, pages: 590, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BE337000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Descriptor { phys_start: 00000000BE33A000, virt_start: 0000000000000000, pages: 14, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BE348000, virt_start: 0000000000000000, pages: 19, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Descriptor { phys_start: 00000000BE35B000, virt_start: 0000000000000000, pages: 1231, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BE82A000, virt_start: 0000000000000000, pages: 183, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BE8E1000, virt_start: 0000000000000000, pages: 142, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BE96F000, virt_start: 0000000000000000, pages: 166, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA15000, virt_start: 0000000000000000, pages: 11, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA20000, virt_start: 0000000000000000, pages: 20, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA34000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA37000, virt_start: 0000000000000000, pages: 40, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA5F000, virt_start: 0000000000000000, pages: 6, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA65000, virt_start: 0000000000000000, pages: 15, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA74000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA76000, virt_start: 0000000000000000, pages: 24, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA8E000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA91000, virt_start: 0000000000000000, pages: 7, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEA98000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEA99000, virt_start: 0000000000000000, pages: 20, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEAAD000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEAAF000, virt_start: 0000000000000000, pages: 6, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEAB5000, virt_start: 0000000000000000, pages: 6, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEABB000, virt_start: 0000000000000000, pages: 64, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEAFB000, virt_start: 0000000000000000, pages: 4, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEAFF000, virt_start: 0000000000000000, pages: 12, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEB0B000, virt_start: 0000000000000000, pages: 12, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEB17000, virt_start: 0000000000000000, pages: 11, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEB22000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEB23000, virt_start: 0000000000000000, pages: 30, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEB41000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEB42000, virt_start: 0000000000000000, pages: 30, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEB60000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEB62000, virt_start: 0000000000000000, pages: 20, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEB76000, virt_start: 0000000000000000, pages: 5, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEB7B000, virt_start: 0000000000000000, pages: 48, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEBAB000, virt_start: 0000000000000000, pages: 10, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEBB5000, virt_start: 0000000000000000, pages: 42, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEBDF000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEBE2000, virt_start: 0000000000000000, pages: 13, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEBEF000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEBF1000, virt_start: 0000000000000000, pages: 15, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEC00000, virt_start: 0000000000000000, pages: 514, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEE02000, virt_start: 0000000000000000, pages: 14, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEE10000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEE12000, virt_start: 0000000000000000, pages: 21, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEE27000, virt_start: 0000000000000000, pages: 8, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEE2F000, virt_start: 0000000000000000, pages: 17, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEE40000, virt_start: 0000000000000000, pages: 5, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEE45000, virt_start: 0000000000000000, pages: 62, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEE83000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEE84000, virt_start: 0000000000000000, pages: 50, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEEB6000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEEB7000, virt_start: 0000000000000000, pages: 19, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEECA000, virt_start: 0000000000000000, pages: 7, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEED1000, virt_start: 0000000000000000, pages: 56, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEF09000, virt_start: 0000000000000000, pages: 40, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEF31000, virt_start: 0000000000000000, pages: 13, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEF3E000, virt_start: 0000000000000000, pages: 5, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEF43000, virt_start: 0000000000000000, pages: 19, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEF56000, virt_start: 0000000000000000, pages: 11, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEF61000, virt_start: 0000000000000000, pages: 27, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEF7C000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEF7E000, virt_start: 0000000000000000, pages: 31, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEF9D000, virt_start: 0000000000000000, pages: 10, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFA7000, virt_start: 0000000000000000, pages: 29, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFC4000, virt_start: 0000000000000000, pages: 4, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFC8000, virt_start: 0000000000000000, pages: 6, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFCE000, virt_start: 0000000000000000, pages: 2, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFD0000, virt_start: 0000000000000000, pages: 7, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFD7000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFD8000, virt_start: 0000000000000000, pages: 12, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFE4000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFE7000, virt_start: 0000000000000000, pages: 5, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFEC000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFEF000, virt_start: 0000000000000000, pages: 4, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BEFF3000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BEFF6000, virt_start: 0000000000000000, pages: 17, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BF007000, virt_start: 0000000000000000, pages: 11, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BF012000, virt_start: 0000000000000000, pages: 9, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BF01B000, virt_start: 0000000000000000, pages: 1027, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BF41E000, virt_start: 0000000000000000, pages: 30, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BF43C000, virt_start: 0000000000000000, pages: 1, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BF43D000, virt_start: 0000000000000000, pages: 3, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BF440000, virt_start: 0000000000000000, pages: 1199, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BF8EF000, virt_start: 0000000000000000, pages: 256, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesData) }
+Descriptor { phys_start: 00000000BF9EF000, virt_start: 0000000000000000, pages: 256, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesCode) }
+Descriptor { phys_start: 00000000BFAEF000, virt_start: 0000000000000000, pages: 128, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Reserved) }
+Descriptor { phys_start: 00000000BFB6F000, virt_start: 0000000000000000, pages: 16, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiReclaim) }
+Free memory addr=0000000000900000 len=3129276kb
+
+Descriptor { phys_start: 00000000BFB7F000, virt_start: 0000000000000000, pages: 128, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+
+Descriptor { phys_start: 00000000BFBFF000, virt_start: 0000000000000000, pages: 513, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BFE00000, virt_start: 0000000000000000, pages: 210, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Descriptor { phys_start: 00000000BFED2000, virt_start: 0000000000000000, pages: 32, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BFEF2000, virt_start: 0000000000000000, pages: 60, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BFF2E000, virt_start: 0000000000000000, pages: 9, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesData) }
+Descriptor { phys_start: 00000000BFF37000, virt_start: 0000000000000000, pages: 33, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(BootServicesCode) }
+Descriptor { phys_start: 00000000BFF58000, virt_start: 0000000000000000, pages: 32, attributes: [noncacheable, write_combine, write_through, write_back, runtime, ], type: Some(RuntimeServicesData) }
+Free memory addr=00000000BFBFF000 len=3428kb
+
+Descriptor { phys_start: 00000000BFF78000, virt_start: 0000000000000000, pages: 136, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(AcpiNVS) }
+
+Descriptor { phys_start: 0000000100000000, virt_start: 0000000000000000, pages: 262144, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Free memory addr=0000000100000000 len=1048576kb
+
+Descriptor { phys_start: 0000000140000000, virt_start: 0000000000000000, pages: 26, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(LoaderCode) }
+
+Descriptor { phys_start: 000000014001A000, virt_start: 0000000000000000, pages: 1048550, attributes: [noncacheable, write_combine, write_through, write_back, ], type: Some(Conventional) }
+Free memory addr=000000014001A000 len=4194200kb
