@@ -1,32 +1,57 @@
 #![no_std]
 
-//use core::ptr::NonNull;
+mod unique;
+pub use unique::Unique;
 
 pub const B: usize = 32;
 const PTR_EQ_MASK: usize = !0x1FFFFF;
 
+type Node = [MaybeUninit<Edge>; 2*B];
 type BigNode = Node;
-type Bits = u8;
 
-struct Node {
-    /// Length of `nodes` and `bits` array. In the future it might be encoded
-    /// in pointers, to avoid TLB misses for just reading `len`
-    len: usize,
+struct Edge {
+    /// Pointer to node "to the right" of the current one.
+    /// The second element is the node "to the left", so only
+    /// valid for Node[0]
+    ptr: Unique<[Node; 2]>,
 
-    /// nodes[0] is a special node that really is `*mut [Node; 2]`
-    nodes: [*mut Node; 2 * B],
+    /// The number of elements in Node
+    len: [u8; 2],
 
-    /// If a pointer is one of 512 buddies of nodes[i],
-    /// a bit will be flipped in bits[i]
-    bits: [Bits; 2 * B],
+    /// Bits used for finding the 8 buddies
+    bits: u8,
 }
 
-impl Node {
-    pub fn insert(&mut self, ptr: *mut Node) -> Option<*mut BigNode> {
+impl Edge {
+    pub fn right_node(&mut self) -> &mut [Self] {
+        let node = &mut self.ptr[0] as *mut Node as *mut Edge;
+        let len = self.len[0] as usize;
+        unsafe {
+            core::slice::from_raw_parts_mut(node, len)
+        }
+    }
+    pub fn left_node(&mut self) -> &mut [Self] {
+        let node = &mut self.ptr[1] as *mut Node as *mut Edge;
+        let len = self.len[1] as usize;
+        unsafe {
+            core::slice::from_raw_parts_mut(node, len)
+        }
+    }
+
+    pub fn insert(&mut self, ptr: Unique<Node>) -> Option<Unique<BigNode>> {
         todo!()
     }
 
-    pub fn pop(&mut self) -> Option<*mut Node> {
-        todo!()
+    pub fn pop(&mut self) -> Option<Unique<Node>> {
+        let result = self
+            .right_node()
+            .last()
+            .map(Self::pop);
+
+        if result.is_some() {
+            return result;
+        }
+
+        todo!("Check the bit and return pointer");
     }
 }
