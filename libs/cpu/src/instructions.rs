@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 #[inline(always)]
 pub unsafe fn ud2() -> ! {
     asm!("ud2", options(nomem, nostack, noreturn));

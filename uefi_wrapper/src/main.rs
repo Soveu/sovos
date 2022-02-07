@@ -173,4 +173,3 @@ fn prepare_kernel_elf(out: &mut SerialPort) {
 
     todo!("Actually load the ELF");
 }
-

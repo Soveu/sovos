@@ -1,5 +1,6 @@
 #![cfg(feature = "ringzero")]
 
+use core::arch::asm;
 use crate::{impl_bits, paging, PhysAddr, VirtAddr};
 
 /// The processor halt instruction (HLT) halts instruction execution, leaving

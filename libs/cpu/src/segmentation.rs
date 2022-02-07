@@ -1,5 +1,6 @@
 //use core::convert::TryInto;
 use core::ptr;
+use core::arch::asm;
 
 use super::Ring;
 

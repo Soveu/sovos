@@ -7,6 +7,8 @@
 #![feature(naked_functions)]
 #![feature(extern_types)]
 
+use core::arch::asm;
+
 #[panic_handler]
 fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
     loop {}

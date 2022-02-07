@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 //use crate::VirtAddr;
 
 #[derive(Clone, Copy)]
