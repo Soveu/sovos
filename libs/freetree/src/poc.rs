@@ -1,9 +1,9 @@
 //use core::mem::MaybeUninit;
 use crate::Unique;
 use arrayvec::ArrayVec;
-use core::fmt;
+use core::{mem, fmt};
 
-pub const B: usize = 4;
+pub const B: usize = 2;
 pub const TWO_B: usize = 2*B;
 
 pub const RIGHT_NODE_IDX: usize = 0;
@@ -47,6 +47,12 @@ pub enum InsertionResult {
     Overflow(Edge),
 }
 
+pub enum RemovalResult {
+    NotFound,
+    Done(Edge),
+    Underflow(Edge),
+}
+
 impl Node {
     pub fn new() -> Self {
         Self {
@@ -59,20 +65,12 @@ impl Node {
             return false;
         }
 
-        let edge = self.edges
-            .iter()
-            .rev()
-            .find(move |e| e.as_usize() <= p);
-
-        match edge {
-            Some(e) if e.as_usize() == p => return true,
-            None if self.edges[0].as_usize() == p => return true,
-            _ => {},
-        }
-
+        // Binary search is around 20% faster, depending on B
+        let edge = self.edges.binary_search_by_key(&p, Unique::as_usize);
         let node = match edge {
-            Some(e) => &e[RIGHT_NODE_IDX],
-            None => &self.edges[0][LEFT_NODE_IDX],
+            Ok(_) => return true,
+            Err(0) => &self.edges[0][LEFT_NODE_IDX],
+            Err(i) => &self.edges[i-1][RIGHT_NODE_IDX],
         };
 
         return node.search(p);
@@ -81,7 +79,7 @@ impl Node {
     fn insert_split(&mut self, index: usize, mut new_edge: Edge) -> Edge {
         if index == B {
             // New edge is the median
-            self.edges[B][LEFT_NODE_IDX].edges.extend(new_edge[0].edges.drain(..));
+            self.edges[B][LEFT_NODE_IDX].edges.extend(new_edge[RIGHT_NODE_IDX].edges.drain(..));
             new_edge[0].edges.extend(self.edges.drain(B..));
             return new_edge;
         }
@@ -133,15 +131,11 @@ impl Node {
             return InsertionResult::Overflow(new_edge);
         }
 
-        let edge = self.edges
-            .iter_mut()
-            .enumerate()
-            .rev()
-            .find(|(_i, e)| e.as_usize() <= new_edge.as_usize());
-
+        let edge = self.edges.binary_search_by_key(&new_edge.as_usize(), Unique::as_usize);
         let (split_insertion_index, child_node) = match edge {
-            Some((i, e)) => (i+1, &mut e[RIGHT_NODE_IDX]),
-            None => (0, &mut self.edges[0][LEFT_NODE_IDX]),
+            Ok(_) => unreachable!("every Edge should be Unique"),
+            Err(0) => (0, &mut self.edges[0][LEFT_NODE_IDX]),
+            Err(i) => (i, &mut self.edges[i-1][RIGHT_NODE_IDX]),
         };
 
         let overflow_element = match child_node.find_and_insert(new_edge) {
@@ -156,6 +150,46 @@ impl Node {
 
         let median = self.insert_split(split_insertion_index, overflow_element);
         return InsertionResult::Overflow(median);
+    }
+
+    fn remove_leaf(&mut self, index: usize) -> RemovalResult {
+        let item = self.edges.remove(index);
+
+        if self.edges.len() < B {
+            return RemovalResult::Underflow(item);
+        }
+        return RemovalResult::Done(item);
+    }
+
+    fn remove(&mut self, index: usize) -> RemovalResult {
+        let leaf = self.grab_next_leaf();
+        let item = mem::replace(&mut self.edges[index], leaf);
+        todo!("found it, but it might be an intermediate node");
+    }
+    fn grab_next_leaf(&mut self) -> Edge {
+        if self.edges[0][LEFT_NODE_IDX].edges.len() != 0 {
+            return self.edges[0][LEFT_NODE_IDX].grab_next_leaf();
+        }
+        todo!("return self.remove_leaf(i) and rebalance");
+    }
+
+    pub fn find_and_remove(&mut self, p: usize) -> RemovalResult {
+        if self.edges.is_empty() {
+            return RemovalResult::NotFound;
+        }
+
+        let index = self.edges.binary_search_by_key(&p, Unique::as_usize);
+        let index = match index {
+            Ok(i) => return self.remove(i),
+            Err(i) => i,
+        };
+
+        let node = match index {
+            0 => &mut self.edges[0][LEFT_NODE_IDX],
+            i => &mut self.edges[i][RIGHT_NODE_IDX],
+        };
+
+        return node.find_and_remove(p);
     }
 }
 
