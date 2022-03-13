@@ -213,17 +213,16 @@ impl Node {
         let new_parent = left.edges.pop().unwrap();
         let mut old_parent = mem::replace(parent, new_parent);
 
+        debug_assert!(parent[LEFT_NODE_IDX].edges.is_empty());
+        parent[LEFT_NODE_IDX].edges.extend(old_parent[LEFT_NODE_IDX].edges.drain(..));
         old_parent[LEFT_NODE_IDX].edges.extend(parent[RIGHT_NODE_IDX].edges.drain(..));
         parent[RIGHT_NODE_IDX].edges.push(old_parent);
 
         unsafe {
-            let old_parent: *mut Self = &mut parent[RIGHT_NODE_IDX].edges[0][RIGHT_NODE_IDX];
+            let old_parent: *mut Edge = parent[RIGHT_NODE_IDX].edges.last_mut().unwrap();
             let old_parent = &mut *old_parent;
-            parent[RIGHT_NODE_IDX].edges.extend(old_parent.edges.drain(..));
+            parent[RIGHT_NODE_IDX].edges.extend(old_parent[RIGHT_NODE_IDX].edges.drain(..));
         }
-
-        let (old_parent, rest) = parent[RIGHT_NODE_IDX].edges.split_first_mut().unwrap();
-        old_parent[RIGHT_NODE_IDX].edges.extend(rest[0][LEFT_NODE_IDX].edges.drain(..));
     }
 
     fn rotate_left(left: &mut Self, parent: &mut Edge) {
@@ -239,6 +238,7 @@ impl Node {
         let new_parent = parent[RIGHT_NODE_IDX].edges.pop().unwrap();
         let mut old_parent = mem::replace(parent, new_parent);
         old_parent[RIGHT_NODE_IDX].edges.extend(parent[LEFT_NODE_IDX].edges.drain(..));
+        debug_assert!(old_parent[LEFT_NODE_IDX].edges.is_empty());
         left.edges.push(old_parent);
     }
 
@@ -255,7 +255,7 @@ impl Node {
         let right = index - 1;
         let right = self.edges.remove(right);
         let left = &mut self.edges[left][RIGHT_NODE_IDX].edges;
-        debug_assert!(left.len() == B);
+        debug_assert_eq!(left.len(), B);
 
         left.push(right);
         let last: *mut Self = &mut left.last_mut().unwrap()[RIGHT_NODE_IDX];
@@ -306,7 +306,18 @@ impl Node {
         debug_assert!(index <= TWO_B);
         //debug_assert!(self.edges.len() >= B, "This method can't be called on root!");
 
-        if index == 0 || (/* root case */index == 1 && self.edges.len() == 1) {
+        if index == 1 && self.edges.len() == 1 {
+            if self.edges[0][LEFT_NODE_IDX].edges.len() <= B {
+                return self.merge_first(to_return);
+            }
+            let parent: *mut Edge = &mut self.edges[0];
+            let left = &mut self.edges[0][LEFT_NODE_IDX];
+            let parent = unsafe { &mut *parent };
+            Self::rotate_right(left, parent);
+            return self.check_size_and_ret(to_return);
+
+        }
+        if index == 0 {
             if self.edges[0][RIGHT_NODE_IDX].edges.len() <= B {
                 return self.merge_first(to_return);
             }
@@ -349,7 +360,7 @@ impl Node {
         let left = if index == 1 {
             &mut self.edges[0][LEFT_NODE_IDX]
         } else {
-            &mut self.edges[index-1][RIGHT_NODE_IDX]
+            &mut self.edges[index-2][RIGHT_NODE_IDX]
         };
         if left.edges.len() > B {
             Self::rotate_right(left, unsafe { &mut *parent });

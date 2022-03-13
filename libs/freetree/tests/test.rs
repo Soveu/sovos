@@ -66,7 +66,7 @@ fn test1() {
 fn test2() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..36)
+    let mut allocations: Vec<_> = (0..50)
         .into_iter()
         .map(|_| Unique::into_raw(new_edge()) as usize)
         .collect();
