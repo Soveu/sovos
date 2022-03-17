@@ -168,10 +168,23 @@ impl Node {
 
     fn try_remove(&mut self, index: usize) -> RemovalResult {
         let item = self.edges.remove(index);
-        if self.edges.len() < B {
-            return RemovalResult::Underflow(item);
+        return self.check_size_and_ret(item);
+    }
+
+    fn push_and_flatten(&mut self, new: Edge) {
+        self.edges.push(new);
+        let last: *mut Self = &mut self.edges.last_mut().unwrap()[RIGHT_NODE_IDX];
+        unsafe {
+            let last = &mut *last;
+            self.edges.extend(last.edges.drain(..));
         }
-        return RemovalResult::Done(item);
+    }
+
+    fn check_size_and_ret(&self, to_return: Edge) -> RemovalResult {
+        if self.edges.len() < B {
+            return RemovalResult::Underflow(to_return);
+        }
+        return RemovalResult::Done(to_return);
     }
 
     fn grab_leaf(&mut self) -> RemovalResult {
@@ -187,23 +200,20 @@ impl Node {
         };
     }
 
-    fn replace(dst: &mut Edge, mut src: Edge) -> RemovalResult {
+    fn replace(&mut self, index: usize, mut src: Edge) -> Edge {
+        let dst = &mut self.edges[index];
         debug_assert!(src[RIGHT_NODE_IDX].edges.is_empty());
-
         src[RIGHT_NODE_IDX].edges.extend(dst[RIGHT_NODE_IDX].edges.drain(..));
         src[LEFT_NODE_IDX].edges.extend(dst[LEFT_NODE_IDX].edges.drain(..));
-        return RemovalResult::Done(mem::replace(dst, src));
+        return mem::replace(dst, src);
     }
 
     fn remove(&mut self, index: usize) -> RemovalResult {
         return match self.edges[index][RIGHT_NODE_IDX].grab_leaf() {
             RemovalResult::NotFound => self.try_remove(index),
-            RemovalResult::Done(leaf) => Self::replace(&mut self.edges[index], leaf),
+            RemovalResult::Done(leaf) => RemovalResult::Done(self.replace(index, leaf)),
             RemovalResult::Underflow(leaf) => {
-                let new = &mut self.edges[index];
-                let mut ret = mem::replace(new, leaf);
-                new[LEFT_NODE_IDX].edges.extend(ret[LEFT_NODE_IDX].edges.drain(..));
-                new[RIGHT_NODE_IDX].edges.extend(ret[RIGHT_NODE_IDX].edges.drain(..));
+                let ret = self.replace(index, leaf);
                 self.rebalance(index+1, ret)
             },
         };
@@ -213,22 +223,19 @@ impl Node {
         let new_parent = left.edges.pop().unwrap();
         let mut old_parent = mem::replace(parent, new_parent);
 
-        debug_assert!(parent[LEFT_NODE_IDX].edges.is_empty());
+        // This is not necessary for typical scenarios, but is needed if parent index == 0,
+        // so it has both left and right edge
         parent[LEFT_NODE_IDX].edges.extend(old_parent[LEFT_NODE_IDX].edges.drain(..));
-        old_parent[LEFT_NODE_IDX].edges.extend(parent[RIGHT_NODE_IDX].edges.drain(..));
-        parent[RIGHT_NODE_IDX].edges.push(old_parent);
 
-        unsafe {
-            let old_parent: *mut Edge = parent[RIGHT_NODE_IDX].edges.last_mut().unwrap();
-            let old_parent = &mut *old_parent;
-            parent[RIGHT_NODE_IDX].edges.extend(old_parent[RIGHT_NODE_IDX].edges.drain(..));
-        }
+        old_parent[LEFT_NODE_IDX].edges.extend(parent[RIGHT_NODE_IDX].edges.drain(..));
+        parent[RIGHT_NODE_IDX].push_and_flatten(old_parent);
     }
 
     fn rotate_left(left: &mut Self, parent: &mut Edge) {
         let (new_parent, rest) = parent[RIGHT_NODE_IDX].edges.split_first_mut().unwrap();
         rest[0][LEFT_NODE_IDX].edges.extend(new_parent[RIGHT_NODE_IDX].edges.drain(..));
 
+        // SAFETY: we won't alias or invalidate the pointer
         unsafe {
             let new_parent: *mut Self = &mut parent[RIGHT_NODE_IDX].edges[0][RIGHT_NODE_IDX];
             let new_parent = &mut *new_parent;
@@ -238,15 +245,12 @@ impl Node {
         let new_parent = parent[RIGHT_NODE_IDX].edges.pop().unwrap();
         let mut old_parent = mem::replace(parent, new_parent);
         old_parent[RIGHT_NODE_IDX].edges.extend(parent[LEFT_NODE_IDX].edges.drain(..));
-        debug_assert!(old_parent[LEFT_NODE_IDX].edges.is_empty());
+        let old_parent_left: *mut Self = &mut old_parent[LEFT_NODE_IDX];
         left.edges.push(old_parent);
-    }
-
-    fn check_size_and_ret(&self, to_return: Edge) -> RemovalResult {
-        if self.edges.len() < B {
-            return RemovalResult::Underflow(to_return);
+        // This is UB I guess, because aliasing issues
+        unsafe {
+            parent[LEFT_NODE_IDX].edges.extend((*old_parent_left).edges.drain(..));
         }
-        return RemovalResult::Done(to_return);
     }
 
     fn rebalance(&mut self, index: usize, to_return: Edge) -> RemovalResult {
@@ -254,37 +258,32 @@ impl Node {
             index <= self.edges.len(),
             "index={} > len={}", index, self.edges.len()
         );
-        let parent_index = index.saturating_sub(1);
-
         // I'm sorry, Ferris
         // I can't figure out a way to make it nice and not get borrow checked,
         // so pointers were used as a workaround
-        let left_neighbour: *mut Self = match parent_index.checked_sub(1) {
-            Some(i) => &mut self.edges[i][RIGHT_NODE_IDX],
-            None if index != 0 => &mut self.edges[0][LEFT_NODE_IDX],
-            None => ptr::null_mut(),
-        };
-        let right_neighbour: *mut Edge = match self.edges.get_mut(index) {
-            Some(r) => r,
-            None => ptr::null_mut(),
-        };
+        let parent_index = index.saturating_sub(1);
+        let parent: *mut Edge = &mut self.edges[parent_index];
 
-        let parent: &mut Edge = &mut self.edges[parent_index];
-        // SAFETY: I promise not to alias those &muts
-        let (left_neighbour, right_neighbour) = unsafe {
-            (left_neighbour.as_mut(), right_neighbour.as_mut())
-        };
-
-        if right_neighbour.as_ref().filter(|edge| edge[RIGHT_NODE_IDX].edges.len() > B).is_some() {
-            let kinda_left = &mut parent[if index == 0 { LEFT_NODE_IDX } else { RIGHT_NODE_IDX }];
-            Self::rotate_left(kinda_left, right_neighbour.unwrap());
-            return RemovalResult::Done(to_return);
-        }
-        if left_neighbour.as_ref().filter(|node| node.edges.len() > B).is_some() {
-            Self::rotate_right(left_neighbour.unwrap(), parent);
+        if let Some(right) = self.edges.get_mut(index)
+            .filter(|edge| edge[RIGHT_NODE_IDX].edges.len() > B) 
+        {
+            let i = if index == 0 { LEFT_NODE_IDX } else { RIGHT_NODE_IDX };
+            let kinda_left = unsafe { &mut (*parent)[i] };
+            Self::rotate_left(kinda_left, right);
             return RemovalResult::Done(to_return);
         }
 
+        let left_neighbour = match parent_index.checked_sub(1) {
+            Some(i) => Some(&mut self.edges[i][RIGHT_NODE_IDX]),
+            None if index != 0 => Some(&mut self.edges[0][LEFT_NODE_IDX]),
+            None => None,
+        };
+        if let Some(left) = left_neighbour.filter(|node| node.edges.len() > B) {
+            Self::rotate_right(left, unsafe { &mut *parent });
+            return RemovalResult::Done(to_return);
+        }
+
+        // Merge
         let mut removed_parent = self.edges.remove(parent_index);
         if parent_index == 0 {
             let to_append = &mut self.edges[0][LEFT_NODE_IDX].edges;
