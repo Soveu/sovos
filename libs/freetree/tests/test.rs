@@ -66,7 +66,7 @@ fn xorshift(mut x: u32) -> u32 {
 fn test2() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..10)
+    let mut allocations: Vec<_> = (0..5_000_000)
         .into_iter()
         .map(|_| Unique::into_raw(new_edge()) as usize)
         .collect();
@@ -80,7 +80,7 @@ fn test2() {
     }
 
     print!("Inserting elements");
-    //let now = Instant::now();
+    let now = Instant::now();
     for edge in allocations.iter().copied() {
         let edge = unsafe { Unique::from_raw(edge as *mut _) };
         //println!("\nInserting {:x}", p);
@@ -88,17 +88,19 @@ fn test2() {
         root.insert(edge);
         //assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
     }
-    //println!(" {:?}", now.elapsed());
+    println!(" {:?}", now.elapsed());
 
     //println!("{:?}", root);
 
-    //let now = Instant::now();
-    for p in allocations {
-        println!("Removing {:X}", p);
-        println!("{:?}", root);
+    let now = Instant::now();
+    print!("Deleting elements");
+    for p in allocations.into_iter() {
+        //println!("Removing {:X}", p);
+        //println!("{:?}", root);
+        //root.sanity_check();
         let res = ManuallyDrop::new(root.remove(p));
         assert_eq!(res.as_ref().unwrap().as_usize(), p);
     }
-    //println!(" {:?}", now.elapsed());
+    println!(" {:?}", now.elapsed());
 
 }

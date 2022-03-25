@@ -41,6 +41,9 @@ impl<T: ?Sized> Unique<T> {
         mem::forget(seif);
         return ptr;
     }
+    pub fn as_ptr(seif: &mut Self) -> *mut T {
+        seif.0.as_ptr()
+    }
 }
 
 impl<T> Unique<T> {

@@ -1,7 +1,8 @@
 //use core::mem::MaybeUninit;
 use crate::Unique;
 use arrayvec::ArrayVec;
-use core::{mem, fmt, ptr};
+use core::{mem, fmt};
+use core::ptr;
 
 pub const B: usize = 2;
 pub const TWO_B: usize = 2*B;
@@ -13,6 +14,9 @@ pub const LEFT_NODE_IDX: usize = 1;
 pub struct Root(Node);
 
 impl Root {
+    pub fn sanity_check(&self) {
+        self.0.sanity_check()
+    }
     pub fn new() -> Self {
         Self(Node::new())
     }
@@ -61,6 +65,36 @@ pub enum RemovalResult {
 }
 
 impl Node {
+    pub fn sanity_check(&self) {
+        if self.edges.len() == 0 {
+            return;
+        }
+
+        assert!(
+            self.edges.is_sorted_by_key(Unique::as_usize),
+            "ERROR: self.edges is NOT sorted",
+        );
+
+        let are_all_right_edges_empty = self.edges
+            .iter()
+            .all(|e| e[RIGHT_NODE_IDX].edges.is_empty());
+        assert!(
+            self.edges[0][LEFT_NODE_IDX].edges.is_empty() == are_all_right_edges_empty,
+            "ERROR: some nodes don't have edges\n{:?}",
+            self,
+        );
+
+        assert!(
+            self.edges[1..].iter().all(|e| e[LEFT_NODE_IDX].edges.is_empty()),
+            "ERROR: some nodes have a left edge",
+        );
+
+        self.edges[0][LEFT_NODE_IDX].sanity_check();
+        self.edges
+            .iter()
+            .map(|e| &e[RIGHT_NODE_IDX])
+            .for_each(Self::sanity_check);
+    }
     pub fn new() -> Self {
         Self {
             edges: ArrayVec::new(),
@@ -159,13 +193,6 @@ impl Node {
         return InsertionResult::Overflow(median);
     }
 
-
-
-
-
-
-
-
     fn try_remove(&mut self, index: usize) -> RemovalResult {
         let item = self.edges.remove(index);
         return self.check_size_and_ret(item);
@@ -174,9 +201,15 @@ impl Node {
     fn push_and_flatten(&mut self, new: Edge) {
         self.edges.push(new);
         let last: *mut Self = &mut self.edges.last_mut().unwrap()[RIGHT_NODE_IDX];
+        // SAFETY: we are not aliasing + ArrayVec doesn't reallocate, so `last`
+        // is always valid here
         unsafe {
             let last = &mut *last;
+            let new_idx = self.edges.len();
             self.edges.extend(last.edges.drain(..));
+            if let Some(x) = self.edges.get_mut(new_idx) {
+                last.edges.extend(x[LEFT_NODE_IDX].edges.drain(..));
+            }
         }
     }
 
@@ -219,38 +252,81 @@ impl Node {
         };
     }
 
-    fn rotate_right(left: &mut Self, parent: &mut Edge) {
-        let new_parent = left.edges.pop().unwrap();
-        let mut old_parent = mem::replace(parent, new_parent);
-
-        // This is not necessary for typical scenarios, but is needed if parent index == 0,
-        // so it has both left and right edge
-        parent[LEFT_NODE_IDX].edges.extend(old_parent[LEFT_NODE_IDX].edges.drain(..));
-
-        old_parent[LEFT_NODE_IDX].edges.extend(parent[RIGHT_NODE_IDX].edges.drain(..));
-        parent[RIGHT_NODE_IDX].push_and_flatten(old_parent);
-    }
-
-    fn rotate_left(left: &mut Self, parent: &mut Edge) {
-        let (new_parent, rest) = parent[RIGHT_NODE_IDX].edges.split_first_mut().unwrap();
+    unsafe fn _rotate_left(left: *mut Self, parent: *mut Edge) {
+        let (new_parent, rest) = (*parent)[RIGHT_NODE_IDX]
+            .edges
+            .split_first_mut()
+            .unwrap();
         rest[0][LEFT_NODE_IDX].edges.extend(new_parent[RIGHT_NODE_IDX].edges.drain(..));
 
         // SAFETY: we won't alias or invalidate the pointer
+        let new_parent = &mut (*parent)[RIGHT_NODE_IDX].edges[0][RIGHT_NODE_IDX];
+        new_parent.edges.extend((*parent)[RIGHT_NODE_IDX].edges.drain(1..));
+
+        let new_parent = (*parent)[RIGHT_NODE_IDX].edges.pop().unwrap();
+        let mut old_parent = ptr::replace(parent, new_parent);
+        old_parent[RIGHT_NODE_IDX].edges.extend((*parent)[LEFT_NODE_IDX].edges.drain(..));
+        let old_parent_left: *mut Self = &mut old_parent[LEFT_NODE_IDX];
+        (*left).edges.push(old_parent);
+
+        // SAFETY: yes? there can be aliasing, but miri doesn't complain
+        // Also, the pointer is still valid
+        (*parent)[LEFT_NODE_IDX].edges.extend((*old_parent_left).edges.drain(..));
+    }
+
+    fn try_rotate_left(&mut self, index: usize) -> bool {
+        let edges: *mut [Edge] = &mut self.edges[..];
+        let parent_index = index.saturating_sub(1);
+
         unsafe {
-            let new_parent: *mut Self = &mut parent[RIGHT_NODE_IDX].edges[0][RIGHT_NODE_IDX];
-            let new_parent = &mut *new_parent;
-            new_parent.edges.extend(parent[RIGHT_NODE_IDX].edges.drain(1..));
+            let parent = edges.get_unchecked_mut(parent_index);
+            let i = if index == 0 { LEFT_NODE_IDX } else { RIGHT_NODE_IDX };
+            let kinda_left = ptr::addr_of_mut!((*Unique::as_ptr(&mut *parent))[i]);
+
+            if let Some(right) = (index < edges.len())
+                .then(|| edges.get_unchecked_mut(index))
+                .filter(|&edge| (*edge)[RIGHT_NODE_IDX].edges.len() > B)
+            {
+                Self::_rotate_left(kinda_left, right);
+                return true;
+            }
         }
 
-        let new_parent = parent[RIGHT_NODE_IDX].edges.pop().unwrap();
-        let mut old_parent = mem::replace(parent, new_parent);
-        old_parent[RIGHT_NODE_IDX].edges.extend(parent[LEFT_NODE_IDX].edges.drain(..));
-        let old_parent_left: *mut Self = &mut old_parent[LEFT_NODE_IDX];
-        left.edges.push(old_parent);
-        // This is UB I guess, because aliasing issues
+        return false;
+    }
+
+    unsafe fn _rotate_right(left: *mut Self, parent: *mut Edge) {
+        let new_parent = (*left).edges.pop().unwrap();
+        let mut old_parent = ptr::replace(parent, new_parent);
+
+        // This is not necessary for typical scenarios, but is needed if parent index == 0,
+        // so it has both left and right edge
+        (*parent)[LEFT_NODE_IDX].edges.extend(old_parent[LEFT_NODE_IDX].edges.drain(..));
+
+        old_parent[LEFT_NODE_IDX].edges.extend((*parent)[RIGHT_NODE_IDX].edges.drain(..));
+        (*parent)[RIGHT_NODE_IDX].push_and_flatten(old_parent);
+    }
+
+    fn try_rotate_right(&mut self, index: usize) -> bool {
+        let edges: *mut [Edge] = &mut self.edges[..];
+        let parent_index = index.saturating_sub(1);
+
         unsafe {
-            parent[LEFT_NODE_IDX].edges.extend((*old_parent_left).edges.drain(..));
+            let parent = edges.get_unchecked_mut(parent_index);
+            let left_neighbour_index = parent_index.saturating_sub(1);
+            let left_neighbour = edges.get_unchecked_mut(left_neighbour_index);
+            let left_neighbour = match index {
+                0 => return false,
+                1 => ptr::addr_of_mut!((*left_neighbour)[LEFT_NODE_IDX]),
+                _ => ptr::addr_of_mut!((*left_neighbour)[RIGHT_NODE_IDX]),
+            };
+            if (*left_neighbour).edges.len() > B {
+                Self::_rotate_right(left_neighbour, parent);
+                return true;
+            }
         }
+
+        return false;
     }
 
     fn rebalance(&mut self, index: usize, to_return: Edge) -> RemovalResult {
@@ -258,56 +334,25 @@ impl Node {
             index <= self.edges.len(),
             "index={} > len={}", index, self.edges.len()
         );
-        // I'm sorry, Ferris
-        // I can't figure out a way to make it nice and not get borrow checked,
-        // so pointers were used as a workaround
-        let parent_index = index.saturating_sub(1);
-        let parent: *mut Edge = &mut self.edges[parent_index];
 
-        if let Some(right) = self.edges.get_mut(index)
-            .filter(|edge| edge[RIGHT_NODE_IDX].edges.len() > B) 
-        {
-            let i = if index == 0 { LEFT_NODE_IDX } else { RIGHT_NODE_IDX };
-            let kinda_left = unsafe { &mut (*parent)[i] };
-            Self::rotate_left(kinda_left, right);
+        if self.try_rotate_left(index) {
             return RemovalResult::Done(to_return);
         }
-
-        let left_neighbour = match parent_index.checked_sub(1) {
-            Some(i) => Some(&mut self.edges[i][RIGHT_NODE_IDX]),
-            None if index != 0 => Some(&mut self.edges[0][LEFT_NODE_IDX]),
-            None => None,
-        };
-        if let Some(left) = left_neighbour.filter(|node| node.edges.len() > B) {
-            Self::rotate_right(left, unsafe { &mut *parent });
+        if self.try_rotate_right(index) {
             return RemovalResult::Done(to_return);
         }
 
         // Merge
+        let parent_index = index.saturating_sub(1);
         let mut removed_parent = self.edges.remove(parent_index);
-        if parent_index == 0 {
-            let to_append = &mut self.edges[0][LEFT_NODE_IDX].edges;
-            debug_assert!(to_append.is_empty());
-            to_append.extend(removed_parent[LEFT_NODE_IDX].edges.drain(..));
-            to_append.push(removed_parent);
-            unsafe {
-                let removed_parent: *mut Edge = to_append.last_mut().unwrap();
-                let removed_parent = &mut *removed_parent;
-                to_append.extend(removed_parent[RIGHT_NODE_IDX].edges.drain(..));
-            }
+        let to_append = match parent_index.checked_sub(1) {
+            Some(i) => &mut self.edges[i][RIGHT_NODE_IDX],
+            None if self.edges.is_empty() => self, // root case
+            None => &mut self.edges[0][LEFT_NODE_IDX],
+        };
 
-            return self.check_size_and_ret(to_return);
-        }
-
-        let to_append = &mut self.edges[parent_index-1][RIGHT_NODE_IDX].edges;
-        to_append.push(removed_parent);
-        unsafe {
-            let removed_parent: *mut Edge = to_append.last_mut().unwrap();
-            let removed_parent = &mut *removed_parent;
-            debug_assert!(removed_parent[LEFT_NODE_IDX].edges.is_empty());
-            to_append.extend(removed_parent[RIGHT_NODE_IDX].edges.drain(..));
-        }
-
+        to_append.edges.extend(removed_parent[LEFT_NODE_IDX].edges.drain(..));
+        to_append.push_and_flatten(removed_parent);
         return self.check_size_and_ret(to_return);
     }
 
@@ -332,22 +377,6 @@ impl Node {
             x => x,
         };
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 impl fmt::Debug for Node {
