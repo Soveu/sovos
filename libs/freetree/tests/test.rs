@@ -20,13 +20,17 @@ fn xorshift(mut x: u32) -> u32 {
     return x;
 }
 
-#[test]
+//#[test]
 fn test1() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..10_000)
+    let mut allocations: Vec<_> = (0..1_000)
         .into_iter()
-        .map(|_| Unique::into_raw(new_edge()) as usize)
+        .map(|_| new_edge())
+        .collect();
+    let allocation_addresses: Vec<_> = allocations
+        .iter()
+        .map(Unique::as_usize)
         .collect();
 
     for i in 0..allocations.len() {
@@ -42,12 +46,12 @@ fn test1() {
     #[cfg(not(miri))]
     let now = Instant::now();
 
-    for edge in allocations.iter().copied() {
-        let edge = unsafe { Unique::from_raw(edge as *mut _) };
+    for edge in allocations.into_iter() {
+        let p = Unique::as_usize(&edge);
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
-        //assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
+        assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
     }
 
     #[cfg(not(miri))]
@@ -58,7 +62,7 @@ fn test1() {
     #[cfg(not(miri))]
     let now = Instant::now();
 
-    for p in allocations {
+    for p in allocation_addresses {
         assert!(root.search(p), "{:X} not found", p);
     }
 
@@ -69,9 +73,13 @@ fn test1() {
 fn test2() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..10_000)
+    let mut allocations: Vec<_> = (0..1_000)
         .into_iter()
-        .map(|_| Unique::into_raw(new_edge()) as usize)
+        .map(|_| new_edge())
+        .collect();
+    let mut allocation_addresses: Vec<_> = allocations
+        .iter()
+        .map(Unique::as_usize)
         .collect();
 
     for i in 0..allocations.len() {
@@ -80,6 +88,7 @@ fn test2() {
         let index = index % (allocations.len() - i);
         let index = i + index;
         allocations.swap(i, index);
+        allocation_addresses.swap(i, index);
     }
 
     print!("Inserting elements");
@@ -87,12 +96,12 @@ fn test2() {
     #[cfg(not(miri))]
     let now = Instant::now();
 
-    for edge in allocations.iter().copied() {
-        let edge = unsafe { Unique::from_raw(edge as *mut _) };
+    for edge in allocations.into_iter() {
+        let p = Unique::as_usize(&edge);
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
-        //assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
+        assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
     }
 
     #[cfg(not(miri))]
@@ -102,7 +111,7 @@ fn test2() {
     let now = Instant::now();
 
     print!("Deleting elements");
-    for p in allocations.into_iter() {
+    for p in allocation_addresses.into_iter() {
         //println!("Removing {:X}", p);
         //println!("{:?}", root);
         //root.sanity_check();
