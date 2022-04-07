@@ -22,7 +22,6 @@ fn print_help() -> Return {
 }
 
 fn build(mut current_dir: PathBuf) -> Return {
-
     assert!(current_dir.is_absolute());
     current_dir.push("kernel");
 
@@ -35,7 +34,6 @@ fn build(mut current_dir: PathBuf) -> Return {
 
     brint!("Cargo finished with {}\n", status);
     assert!(status.success());
-
 
     assert!(current_dir.pop());
 
@@ -55,7 +53,6 @@ fn build(mut current_dir: PathBuf) -> Return {
     assert!(current_dir.pop());
 
     Ok(())
-
 }
 
 fn build_run_directory(current_dir: PathBuf) -> Return {
@@ -105,6 +102,20 @@ fn run(current_dir: PathBuf) -> Return {
     return Err(qemu.exec().into());
 }
 
+fn _clean(current_dir: &mut PathBuf, clean_target: &str) -> Return {
+    current_dir.push(clean_target);
+    brint!("Cleaning {}\n", clean_target);
+
+    let status = Command::new("cargo")
+        .current_dir(&current_dir)
+        .arg("clean")
+        .status()?;
+
+    brint!("Cargo finished with {}\n", status);
+    assert!(status.success());
+    assert!(current_dir.pop());
+}
+
 fn clean(mut current_dir: PathBuf, clean_target: &str) -> Return {
     if clean_target.len() == 0 {
         return print_help();
@@ -113,33 +124,13 @@ fn clean(mut current_dir: PathBuf, clean_target: &str) -> Return {
     assert!(current_dir.is_absolute());
 
     if clean_target == "all" || clean_target == "kernel" {
-        current_dir.push("kernel");
-
-        brint!("Cleaning kernel\n");
-
-        let status = Command::new("cargo")
-            .current_dir(&current_dir)
-            .arg("clean")
-            .status()?;
-
-        brint!("Cargo finished with {}\n", status);
-        assert!(status.success());
-        assert!(current_dir.pop());
+        _clean("kernel");
     }
-
-
     if clean_target == "all" || clean_target == "uefi_wrapper" {
-        current_dir.push("uefi_wrapper");
-
-        brint!("Cleaning uefi_wrapper\n");
-        let status = Command::new("cargo")
-            .current_dir(&current_dir)
-            .arg("clean")
-            .status()?;
-
-        brint!("Cargo finished with {}\n", status);
-        assert!(status.success());
-        assert!(current_dir.pop());
+        _clean("uefi_wrapper");
+    }
+    if clean_target == "all" || clean_target == "libs" {
+        _clean("libs");
     }
 
     if clean_target == "all" || clean_target == "fat" {
