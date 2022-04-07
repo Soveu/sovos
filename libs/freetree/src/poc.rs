@@ -258,20 +258,24 @@ impl Node {
             .split_first_mut()
             .unwrap();
         rest[0][LEFT_NODE_IDX].edges.extend(new_parent[RIGHT_NODE_IDX].edges.drain(..));
-
         // SAFETY: we won't alias or invalidate the pointer
-        let new_parent = &mut (*parent)[RIGHT_NODE_IDX].edges[0][RIGHT_NODE_IDX];
-        new_parent.edges.extend((*parent)[RIGHT_NODE_IDX].edges.drain(1..));
+        new_parent[RIGHT_NODE_IDX].edges.extend((*parent)[RIGHT_NODE_IDX].edges.drain(1..));
 
         let new_parent = (*parent)[RIGHT_NODE_IDX].edges.pop().unwrap();
-        let mut old_parent = ptr::replace(parent, new_parent);
-        old_parent[RIGHT_NODE_IDX].edges.extend((*parent)[LEFT_NODE_IDX].edges.drain(..));
-        let old_parent_left: *mut Self = &mut old_parent[LEFT_NODE_IDX];
-        (*left).edges.push(old_parent);
+        let mut prev_parent = ptr::replace(parent, new_parent);
+        prev_parent[RIGHT_NODE_IDX].edges.extend((*parent)[LEFT_NODE_IDX].edges.drain(..));
 
-        // SAFETY: yes? there can be aliasing, but miri doesn't complain
-        // Also, the pointer is still valid
-        (*parent)[LEFT_NODE_IDX].edges.extend((*old_parent_left).edges.drain(..));
+        let prev_parent_left: *mut Self = ptr::addr_of_mut!(prev_parent[LEFT_NODE_IDX]);
+        let p = if prev_parent_left == left {
+            prev_parent_left
+        } else {
+            left
+        };
+
+        // SAFETY: yes? miri complained about `left` and `prev_parent_left` aliasing,
+        // but it is fixed by the if-else above
+        (*p).edges.push(prev_parent);
+        (*parent)[LEFT_NODE_IDX].edges.extend((*prev_parent_left).edges.drain(..));
     }
 
     fn try_rotate_left(&mut self, index: usize) -> bool {

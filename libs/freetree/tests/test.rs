@@ -1,14 +1,15 @@
 use freetree::poc::*;
 use freetree::Unique;
 use std::mem::ManuallyDrop;
+
+#[cfg(not(miri))]
 use std::time::Instant;
+
+const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 2_000_000 };
 
 fn box_to_unique<T>(boxed: Box<T>) -> Unique<T> {
     unsafe { Unique::from_raw(Box::into_raw(boxed)) }
 }
-// fn unique_to_box<T>(unique: Unique<T>) -> Box<T> {
-//     unsafe { Box::from_raw(Unique::into_raw(unique)) }
-// }
 fn new_edge() -> Edge {
     let boxed = Box::new([Node::new(), Node::new()]);
     box_to_unique(boxed)
@@ -20,11 +21,11 @@ fn xorshift(mut x: u32) -> u32 {
     return x;
 }
 
-//#[test]
+#[test]
 fn test1() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..1_000)
+    let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)
         .into_iter()
         .map(|_| new_edge())
         .collect();
@@ -66,6 +67,9 @@ fn test1() {
         assert!(root.search(p), "{:X} not found", p);
     }
 
+    #[cfg(not(miri))]
+    println!(" {:?}", now.elapsed());
+
     assert!(root.search(0) == false);
 }
 
@@ -73,7 +77,7 @@ fn test1() {
 fn test2() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..1_000)
+    let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)
         .into_iter()
         .map(|_| new_edge())
         .collect();
