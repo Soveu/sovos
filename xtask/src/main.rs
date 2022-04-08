@@ -102,14 +102,15 @@ fn run(current_dir: PathBuf) -> Return {
     return Err(qemu.exec().into());
 }
 
-fn _clean(current_dir: &mut PathBuf, clean_target: &str) -> Return {
+fn _clean(current_dir: &mut PathBuf, clean_target: &str) {
     current_dir.push(clean_target);
     brint!("Cleaning {}\n", clean_target);
 
     let status = Command::new("cargo")
         .current_dir(&current_dir)
         .arg("clean")
-        .status()?;
+        .status()
+        .unwrap();
 
     brint!("Cargo finished with {}\n", status);
     assert!(status.success());
@@ -124,13 +125,13 @@ fn clean(mut current_dir: PathBuf, clean_target: &str) -> Return {
     assert!(current_dir.is_absolute());
 
     if clean_target == "all" || clean_target == "kernel" {
-        _clean("kernel");
+        _clean(&mut current_dir, "kernel");
     }
     if clean_target == "all" || clean_target == "uefi_wrapper" {
-        _clean("uefi_wrapper");
+        _clean(&mut current_dir, "uefi_wrapper");
     }
     if clean_target == "all" || clean_target == "libs" {
-        _clean("libs");
+        _clean(&mut current_dir, "libs");
     }
 
     if clean_target == "all" || clean_target == "fat" {
