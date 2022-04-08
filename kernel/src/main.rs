@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-#![feature(asm)]
 #![feature(asm_sym)]
 #![feature(bench_black_box)]
 #![feature(naked_functions)]

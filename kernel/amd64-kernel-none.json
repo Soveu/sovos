@@ -28,7 +28,6 @@
   "relro-level": "full",
   "code-model": "small",
   "dynamic-linking": false,
-  "has-elf-tls": false,
   "function-sections": false,
   "split-debuginfo": "packed",
   "eh-frame-header": false,

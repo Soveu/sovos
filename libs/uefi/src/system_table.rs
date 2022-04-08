@@ -1,4 +1,4 @@
-use core::ptr::{self, NonNull};
+use core::ptr::NonNull;
 
 use super::*;
 

@@ -1,9 +1,8 @@
 #![no_std]
 
 use arrayvec::ArrayVec;
-use cpu::{interrupt, PhysAddr, PhysSlice};
+use cpu::interrupt;
 use cpu::segmentation::GlobalDescriptorTable;
-use uart_16550::SerialPort;
 use uefi;
 
 #[repr(C, align(4096))]

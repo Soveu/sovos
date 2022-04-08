@@ -8,11 +8,12 @@ mod boot_services;
 mod guid;
 mod header;
 pub mod memory;
-pub mod protocols;
+mod protocols;
 mod runtime_services;
 mod status;
 mod system_table;
 
+pub use protocols::*;
 pub use boot_services::*;
 pub use guid::*;
 pub use header::*;

@@ -2,13 +2,13 @@
 name = "bootinfo"
 version = "0.1.0"
 authors = ["Soveu <marx.tomasz@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 arrayvec = { version = "0.7", default-features = false }
-uart_16550 = "0.2.15"
+#uart_16550 = "0.2.15"
 
 cpu = { path = "../cpu", version = "*" }
 uefi = { path = "../uefi", version = "*" }

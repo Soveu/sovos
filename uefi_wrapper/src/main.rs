@@ -3,7 +3,6 @@
 
 #![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
-#![feature(asm)]
 #![feature(asm_sym)]
 #![feature(array_chunks)]
 #![feature(const_maybe_uninit_assume_init)]
@@ -15,8 +14,8 @@ use uart_16550::SerialPort;
 
 use elf::{Elf, self};
 use cpu::{self, acpi};
-use bootinfo::Bootinfo;
 use uefi::{self, Verify};
+use bootinfo::Bootinfo;
 
 use core::fmt::Write;
 //use core::ptr;
@@ -55,17 +54,17 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
 
     let st = unsafe { &mut *st };
     let bootinfo = unsafe { &mut BOOTINFO };
-    let mut out = unsafe { SerialPort::new(0x3F8) };
-    static mut buf: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
-    out.init();
+    //let mut out = unsafe { SerialPort::new(0x3F8) };
+    //out.init();
+    static mut BUF: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
 
     assert_eq!(st.verify(), Ok(()));
 
     let boot_services = unsafe { st.boot_services.unwrap().as_ref() };
     //assert_eq!(boot_services.verify(), Ok(()));
 
-    let con_out = unsafe { st.con_out.unwrap().as_mut() };
-    assert_eq!(con_out.print_utf8("TEST\n👍\n"), Ok(()));
+    let out = unsafe { st.con_out.unwrap().as_mut() };
+    assert_eq!(out.print_utf8("TEST\n👍\n"), Ok(()));
 
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);
@@ -94,9 +93,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
         }
     }
 
-    let (memkey, memmap) = boot_services.get_memory_map(unsafe { &mut buf }).unwrap();
-    let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
-    assert_eq!(ok, Ok(()));
+    let (_, memmap) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
 
     let mut addr = 0;
     let mut len = 0;
@@ -122,6 +119,8 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     }
     brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
 
+    prepare_kernel_elf(out);
+
     let cr4 = cpu::Cr4::get();
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
@@ -130,6 +129,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     use cpu::segmentation::GDTR;
     let gdtr = GDTR::new(&bootinfo.gdt);
     unsafe { gdtr.apply(); }
+    brint!(out, "GDT applied\n");
 
     use cpu::interrupt;
     extern "sysv64" fn _dummy_handler(ii: &mut interrupt::Stack) {
@@ -145,16 +145,18 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     bootinfo.idt = [idt_entry; 256];
     let idtr = interrupt::TableRegister::new(&bootinfo.idt);
     unsafe { idtr.apply(); }
+    brint!(out, "IDT applied\n");
 
-    prepare_kernel_elf(&mut out);
+    let (memkey, _) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
+    let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
+    assert_eq!(ok, Ok(()));
 
-    loop { cpu::halt() };
+    todo!("Actually load the ELF");
 }
 
-fn prepare_kernel_elf(out: &mut SerialPort) {
+fn prepare_kernel_elf(out: &mut uefi::SimpleTextOutput) {
     let kernel = KERNEL;
     brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
-    //brint!(out, "bootinfo: {:p}, size={}\n", bootptr, core::mem::size_of::<Bootinfo>());
 
     let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(kernel).unwrap();
     let pheaders = kernelelf.program_headers().unwrap();
@@ -170,6 +172,4 @@ fn prepare_kernel_elf(out: &mut SerialPort) {
     );
     brint!(out, "Program headers: {:#?}\n", pheaders);
     brint!(out, "Section headers: {:#?}\n", sheaders);
-
-    todo!("Actually load the ELF");
 }

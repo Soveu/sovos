@@ -1,5 +1,7 @@
 use crate::*;
 
+use core::fmt;
+
 macro_rules! uefi_fn_ptr {
     ($($arg:tt)*) => { Option<unsafe extern "efiapi" fn($($arg)*) -> RawStatus> };
 }
@@ -154,5 +156,14 @@ impl SimpleTextOutput {
         }
 
         return Ok(());
+    }
+}
+
+impl fmt::Write for SimpleTextOutput {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        match self.print_utf8(s) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(fmt::Error),
+        }
     }
 }
