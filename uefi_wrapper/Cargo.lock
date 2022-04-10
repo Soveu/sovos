@@ -36,6 +36,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdead85bdec19c194affaeeb670c0e41fe23de31459efd1c174d049269cf02cc"
 
 [[package]]
+name = "cereal"
+version = "0.1.0"
+dependencies = [
+ "cpu",
+ "impl_bits",
+]
+
+[[package]]
 name = "cpu"
 version = "0.1.0"
 dependencies = [
@@ -90,6 +98,7 @@ name = "uefi_wrapper"
 version = "0.1.0"
 dependencies = [
  "bootinfo",
+ "cereal",
  "cpu",
  "elf",
  "uart_16550",

@@ -13,3 +13,4 @@ cpu = { version = "*", path = "../libs/cpu" , features = ["ringzero"] }
 bootinfo = { version = "*", path = "../libs/bootinfo" }
 elf = { version = "*", path = "../libs/elf" }
 uefi = { version = "*", path = "../libs/uefi" }
+cereal = { version = "*", path = "../libs/cereal" }

@@ -9,6 +9,7 @@ members = [
   "smbios",
   "hashmap_alloc",
   "freetree",
+  "cereal",
 ]
 
 [profile.release]

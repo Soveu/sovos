@@ -55,3 +55,29 @@ pub unsafe fn bsf(mut x: u64) -> u8 {
 
     return x as u8;
 }
+
+/// SAFETY: port must be valid
+#[inline(always)]
+pub unsafe fn inb(port: u16) -> u8 {
+    let result: u8;
+
+    asm!(
+        "in al, dx",
+        out("al") result,
+        in("dx") port,
+        options(nostack, nomem),
+    );
+
+    return result;
+}
+
+/// SAFETY: port and value must be valid
+#[inline(always)]
+pub unsafe fn outb(port: u16, value: u8) {
+    asm!(
+        "out dx, al",
+        in("dx") port,
+        in("al") value,
+        options(nostack, nomem),
+    );
+}

@@ -16,6 +16,7 @@ use elf::{Elf, self};
 use cpu::{self, acpi};
 use uefi::{self, Verify};
 use bootinfo::Bootinfo;
+use cereal;
 
 use core::fmt::Write;
 //use core::ptr;
@@ -54,8 +55,6 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
 
     let st = unsafe { &mut *st };
     let bootinfo = unsafe { &mut BOOTINFO };
-    //let mut out = unsafe { SerialPort::new(0x3F8) };
-    //out.init();
     static mut BUF: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
 
     assert_eq!(st.verify(), Ok(()));
@@ -113,6 +112,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
                 addr = map.phys_start;
                 len = map.pages * 4096;
             }
+            continue;
         }
 
         brint!(out, "\t{:?}\n", map);
@@ -125,6 +125,10 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
+
+    unsafe {
+        brint!(out, "{:?}\n", cereal::identify_uart(0x3F8));
+    }
 
     use cpu::segmentation::GDTR;
     let gdtr = GDTR::new(&bootinfo.gdt);
