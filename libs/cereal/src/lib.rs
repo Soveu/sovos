@@ -39,12 +39,12 @@ pub use crate::msr::*;
 pub const CON1_PORT: u16 = 0x3F8;
 pub const CON2_PORT: u16 = 0x2F8;
 
-pub const DLL_OFFSET: u16 = 0;
-pub const DLH_OFFSET: u16 = 1;
-pub const IIR_OFFSET: u16 = 2;
-pub const FCR_OFFSET: u16 = 2;
-pub const LCR_OFFSET: u16 = 3;
-pub const SCRATCH_OFFSET: u16 = 7;
+const DLL_OFFSET: u16 = 0;
+const DLH_OFFSET: u16 = 1;
+const IIR_OFFSET: u16 = 2;
+const FCR_OFFSET: u16 = 2;
+const LCR_OFFSET: u16 = 3;
+const SCRATCH_OFFSET: u16 = 7;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SerialPortType {
@@ -109,7 +109,7 @@ pub unsafe fn set_baud_rate(base_port: u16, divisor: u16) {
 }
 
 /// SAFETY: serial port must be under this port
-pub unsafe fn setup_serial_port_on(base_port: u16) {
+pub unsafe fn setup_serial_port(base_port: u16) {
     let serial_type = identify_uart(base_port);
     let fifo_state = if serial_type == SerialPortType::Uart16750 {
         FifoState::Large16750

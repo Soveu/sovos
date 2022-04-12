@@ -81,3 +81,33 @@ pub unsafe fn outb(port: u16, value: u8) {
         options(nostack, nomem),
     );
 }
+
+/// SAFETY: port must be valid for write,
+/// pointer and size must be valid for read.
+/// Also, be aware, that these instructions might be too fast
+/// for the device under that port.
+#[inline(always)]
+pub unsafe fn rep_outsb(port: u16, ptr: *const u8, sz: usize) {
+    asm!(
+        "rep outs dx, byte ptr [rsi]",
+        in("dx") port,
+        in("rsi") ptr,
+        in("rcx") sz,
+        options(nostack, nomem),
+    );
+}
+
+/// SAFETY: port must be valid for read,
+/// pointer and size must be valid for write.
+/// Also, be aware, that these instructions might be too fast
+/// for the device under that port.
+#[inline(always)]
+pub unsafe fn rep_insb(port: u16, ptr: *mut u8, sz: usize) {
+    asm!(
+        "rep ins byte ptr [rdi], dx",
+        in("dx") port,
+        in("rdi") ptr,
+        in("rcx") sz,
+        options(nostack),
+    );
+}

@@ -22,6 +22,7 @@ pub mod acpi;
 pub mod interrupt;
 pub mod paging;
 pub mod segmentation;
+pub mod port;
 
 mod instructions;
 pub use instructions::*;
