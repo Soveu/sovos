@@ -7,7 +7,6 @@ members = [
   "uefi",
   "impl_bits",
   "smbios",
-  "hashmap_alloc",
   "freetree",
   "cereal",
 ]
