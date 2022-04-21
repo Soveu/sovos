@@ -17,9 +17,11 @@ impl Root {
     pub fn sanity_check(&self) {
         self.0.sanity_check()
     }
+
     pub fn new() -> Self {
         Self(Node::new())
     }
+
     pub fn insert(&mut self, new_edge: Edge) {
         if self.0.edges.is_empty() {
             self.0.edges.push(new_edge);
@@ -95,10 +97,9 @@ impl Node {
             .map(|e| &e[RIGHT_NODE_IDX])
             .for_each(Self::sanity_check);
     }
+
     pub fn new() -> Self {
-        Self {
-            edges: ArrayVec::new(),
-        }
+        Self { edges: ArrayVec::new() }
     }
 
     pub fn search(&self, p: usize) -> bool {

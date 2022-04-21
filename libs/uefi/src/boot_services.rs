@@ -144,27 +144,60 @@ pub struct BootServices {
     /// to ExitBootServices().
     exit_boot_services:
         Option<extern "efiapi" fn(ImageHandle, memory::MapKey) -> RawStatus>,
-    /*
-    get_next_monotonic_count: usize,
-    stall: usize,
-    set_watchdog_timer: usize,
-    connect_controller: usize,
-    disconnect_controller: usize,
-    open_protocol: usize,
-    close_protocol: usize,
-    open_protocol_info: usize,
-    protocols_per_handle: usize,
-    locate_handle_buffer: usize,
-    locate_protocol: usize,
-    install_multiple_protocol_interfaces: usize,
-    uninstall_multiple_protocol_interfaces: usize,
 
-    calculate_crc32: usize,
+    pub get_next_monotonic_count: usize,
+    pub stall:                    usize,
+    pub set_watchdog_timer:       usize,
+    pub connect_controller:       usize,
+    pub disconnect_controller:    usize,
+    pub open_protocol:            usize,
+    pub close_protocol:           usize,
+    pub open_protocol_info:       usize,
+    pub protocols_per_handle:     usize,
+    pub locate_handle_buffer:     usize,
 
-    copy_mem: usize,
-    set_mem: usize,
-    create_event_ex: usize,
-    */
+    /// Parameters
+    /// `protocol` - Provides the protocol to search for.
+    /// `registration` - Optional registration key returned from
+    /// EFI_BOOT_SERVICES.RegisterProtocolNotify(). If `registration`is NULL,
+    /// then it is ignored.
+    /// `interface` - On return, a pointer to the first interface that matches
+    /// `protocol` and `registration`.
+    ///
+    /// Description
+    /// The LocateProtocol() function finds the first device handle that support
+    /// Protocol, and returns a pointer to the protocol interface from that
+    /// handle in Interface.
+    ///
+    /// If no protocol instances are found, then `interface` is set to NULL.
+    /// If `interface` is NULL, then EFI_INVALID_PARAMETER is returned.
+    /// If `protocol` is NULL, then EFI_INVALID_PARAMETER is returned.
+    /// If `registration` is NULL, and there are no handles in the handle database
+    /// that support Protocol, then EFI_NOT_FOUND is returned.
+    /// If `registration` is not NULL, and there are no new handles for
+    /// Registration, then EFI_NOT_FOUND is returned.
+    ///
+    /// Status codes returned `EFI_SUCCESS` - A protocol instance matching
+    /// `protocol` was found and returned in `interface`.
+    /// `EFI_INVALID_PARAMETER` - `interface` or `protocol` are NULL.
+    /// `EFI_NOT_FOUND` - No protocol instances were found that match `protocol`
+    /// and `registration`.
+    locate_protocol: Option<
+        extern "efiapi" fn(
+            protocol: &Guid,
+            registration: Option<&()>,
+            interface: &mut Option<NonNull<()>>,
+        ) -> RawStatus,
+    >,
+
+    pub install_multiple_protocol_interfaces:   usize,
+    pub uninstall_multiple_protocol_interfaces: usize,
+
+    pub calculate_crc32: usize,
+
+    pub copy_mem:        usize,
+    pub set_mem:         usize,
+    pub create_event_ex: usize,
 }
 
 impl BootServices {
@@ -212,6 +245,16 @@ impl BootServices {
             .expect("buggy UEFI: BootServices::exit_boot_services is null");
         return (exit_bservices)(handle, key)
             .ok_or_expect_errors(&[Error::InvalidParameter]);
+    }
+
+    pub fn locate_protocol(&self, protocol: Guid) -> Result<Option<NonNull<()>>, Error> {
+        let locate_prot = self
+            .locate_protocol
+            .expect("buggy UEFI: BootServices::locate_protocol is null");
+        let mut ret = None;
+        let _ = (locate_prot)(&protocol, None, &mut ret)
+            .ok_or_expect_errors(&[Error::InvalidParameter, Error::NotFound])?;
+        return Ok(ret);
     }
 }
 

@@ -40,8 +40,7 @@ impl core::fmt::Debug for Descriptor {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.write_fmt(format_args!(
             "Descriptor {{ phys_start: {:016X}, virt_start: {:016X}, pages: {}, \
-            attributes: {:?}, type: {:?} }}",
-
+             attributes: {:?}, type: {:?} }}",
             self.phys_start,
             self.virt_start,
             self.pages,

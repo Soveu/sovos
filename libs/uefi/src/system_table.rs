@@ -1,5 +1,3 @@
-use core::ptr::NonNull;
-
 use super::*;
 
 impl Verify for SystemTable {

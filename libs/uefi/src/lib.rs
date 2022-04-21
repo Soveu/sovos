@@ -3,11 +3,15 @@
 #![feature(maybe_uninit_slice)]
 
 use core::mem::MaybeUninit;
+use core::ptr::NonNull;
+use core::num::NonZeroUsize;
+
+pub mod gop;
+pub mod memory;
 
 mod boot_services;
 mod guid;
 mod header;
-pub mod memory;
 mod protocols;
 mod runtime_services;
 mod status;

@@ -1,7 +1,6 @@
 use core::ptr::NonNull;
 use core::ops::{Deref, DerefMut};
-use core::mem;
-use core::fmt;
+use core::{fmt, mem};
 
 /// An owning, strongly-typed, non-null pointer, similar to Box
 pub struct Unique<T: ?Sized>(NonNull<T>);

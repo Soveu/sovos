@@ -52,10 +52,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hashmap_alloc"
-version = "0.1.0"
-
-[[package]]
 name = "impl_bits"
 version = "0.1.0"
 dependencies = [

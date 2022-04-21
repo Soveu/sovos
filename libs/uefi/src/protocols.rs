@@ -1,6 +1,6 @@
-use crate::*;
-
 use core::fmt;
+
+use crate::*;
 
 macro_rules! uefi_fn_ptr {
     ($($arg:tt)*) => { Option<unsafe extern "efiapi" fn($($arg)*) -> RawStatus> };
