@@ -1,33 +1,60 @@
-//use core::mem::MaybeUninit;
 use crate::Unique;
 use arrayvec::ArrayVec;
 use core::{mem, fmt};
 use core::ptr;
 
+/// The B constant, that determines the "width" of a Node.
+/// Higher value means flatter tree, but also higher costs of operations.
 pub const B: usize = 2;
-pub const TWO_B: usize = 2*B;
+const TWO_B: usize = 2*B;
+const RIGHT_NODE_IDX: usize = 0;
+const LEFT_NODE_IDX: usize = 1;
 
-pub const RIGHT_NODE_IDX: usize = 0;
-pub const LEFT_NODE_IDX: usize = 1;
-
+/// The root of the tree, that manages `Node`s under the hood.
 #[derive(Debug)]
 pub struct Root(Node);
 
 impl Root {
+    /// Performs check of internal invariants of the tree
+    ///
+    /// # Panics
+    /// Panics if invariants are not held
     pub fn sanity_check(&self) {
         self.0.sanity_check()
     }
 
+    /// Creates a new, empty Root without any allocations
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let tree = Root::new();
+    /// ```
     pub fn new() -> Self {
         Self(Node::new())
     }
 
+    /// Inserts a new allocation into the tree.
+    ///
+    /// This function does not return a bool, like BTreeSet for example,
+    /// because the pointer must be unique.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let mut tree = Root::new();
+    /// let address = allocation as usize;
+    ///
+    /// tree.insert(allocation);
+    /// assert_eq!(tree.contains(address), true);
+    /// ```
     pub fn insert(&mut self, new_edge: Edge) {
-        if self.0.edges.is_empty() {
-            self.0.edges.push(new_edge);
-            return;
-        }
-
+        // This will work, even on empty root, because find_and_insert
+        // will return `Overflow` if `edges.len() == 0`
         let mut new_median = match self.0.find_and_insert(new_edge) {
             InsertionResult::Done => return,
             InsertionResult::Overflow(e) => e,
@@ -38,35 +65,97 @@ impl Root {
         self.0.edges.push(new_median);
     }
 
-    pub fn search(&self, p: usize) -> bool {
-        self.0.search(p)
+    /// Returns `true` if the tree contains an allocation that starts with address `addr`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let mut tree = Root::new();
+    /// let address = allocation as usize;
+    ///
+    /// tree.insert(allocation);
+    /// assert_eq!(tree.contains(address), true);
+    ///
+    /// let allocation = tree.remove(address);
+    /// assert!(tree.remove(address).is_some());
+    /// # core::mem::forget(allocation);
+    ///
+    /// assert_eq!(tree.contains(address), false);
+    /// ```
+    pub fn contains(&self, addr: usize) -> bool {
+        self.0.contains(addr)
     }
 
-    pub fn remove(&mut self, p: usize) -> Option<Edge> {
-        match self.0.find_and_remove(p) {
+    /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let mut tree = Root::new();
+    /// let address = allocation as usize;
+    ///
+    /// tree.insert(allocation);
+    /// assert_eq!(tree.contains(address), true);
+    ///
+    /// let allocation = tree.remove(address);
+    /// assert!(tree.remove(address).is_some());
+    /// # core::mem::forget(allocation);
+    /// let allocation = tree.remove(address);
+    /// assert!(tree.remove(address).is_none());
+    /// # core::mem::forget(allocation);
+    /// ```
+    pub fn remove(&mut self, addr: usize) -> Option<Edge> {
+        match self.0.find_and_remove(addr) {
             RemovalResult::NotFound => None,
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
         }
     }
 }
 
+/// The type that is used both as a key and a pointer to
+/// child(ren) in the tree
 pub type Edge = Unique<[Node; 2]>;
+
+/// An ArrayVec of `Edge`s that can hold up to 2*B elements.
+/// All of the core methods are non-public and `Root`
+/// should be used instead.
 pub struct Node {
-    pub edges: ArrayVec<Edge, TWO_B>,
+    edges: ArrayVec<Edge, TWO_B>,
 }
 
-pub enum InsertionResult {
+enum InsertionResult {
+    /// Insertion succeeded and rebalancing is not needed.
     Done,
+
+    /// Insertion succeeded, but the new element would be the 2B+1st element,
+    /// so the Node was split into two.
+    ///
+    /// This Edge is the median, and the Node under it holds elements larger than it.
     Overflow(Edge),
 }
 
-pub enum RemovalResult {
+enum RemovalResult {
+    /// The allocation was not found.
     NotFound,
+
+    /// The allocation has been found and removed. No rebalancing is needed.
     Done(Edge),
+
+    /// The allocation has been found and removed. Rebalancing _is_ needed.
     Underflow(Edge),
 }
 
 impl Node {
+    /// Constructs an empty Node
+    pub fn new() -> Self {
+        Self { edges: ArrayVec::new() }
+    }
+
+    /// Checks if the invariants are being upheld
     pub fn sanity_check(&self) {
         if self.edges.len() == 0 {
             return;
@@ -98,27 +187,41 @@ impl Node {
             .for_each(Self::sanity_check);
     }
 
-    pub fn new() -> Self {
-        Self { edges: ArrayVec::new() }
-    }
-
-    pub fn search(&self, p: usize) -> bool {
+    /// Returns if an allocation starting with `p` exists in the tree.
+    ///
+    /// For examples, see `Root::contains`
+    pub fn contains(&self, p: usize) -> bool {
+        // Root and leaves' children have no elements
         if self.edges.len() == 0 {
             return false;
         }
 
-        // Binary search is around 20% faster, depending on B
-        let edge = self.edges.binary_search_by_key(&p, Unique::as_usize);
-        let node = match edge {
+        // Binary search is around 20% faster than linear one, depending on B
+        let node = match self.edges.binary_search_by_key(&p, Unique::as_usize) {
+            // The element was found
             Ok(_) => return true,
+            // The element is smaller than the smallest edge, so it must be on the left
             Err(0) => &self.edges[0][LEFT_NODE_IDX],
             Err(i) => &self.edges[i-1][RIGHT_NODE_IDX],
         };
 
-        return node.search(p);
+        return node.contains(p);
     }
 
+    // ----------------- BEGIN INSERTION CODE ---------------
+
+    /// Insert an Edge at `index` and split this Node in half,
+    /// returning the median Edge with elements from the "right half".
+    /// If `self.edges` is not full, the resulting split will produce a
+    /// degenerate Node with less than B elements in it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if index > self.edges.len().
+    /// (or in another words, if index > 2B)
     fn insert_split(&mut self, index: usize, mut new_edge: Edge) -> Edge {
+        debug_assert!(self.edges.len() == self.edges.capacity());
+
         if index == B {
             // New edge is the median
             self.edges[B][LEFT_NODE_IDX].edges.extend(new_edge[RIGHT_NODE_IDX].edges.drain(..));
@@ -126,8 +229,13 @@ impl Node {
             return new_edge;
         }
 
+        // We can't just `self.edges.insert(index, new_edge)`,
+        // because `edges` if full. So, we have to first determine
+        // where the median is before insertion.
         let median_index = if index < B { B-1 } else { B };
-        // SAFETY: we are draining [B..] and new median is on B-1 index,
+
+        // Now, we're moving elements from edges[median_index+1..] to the median.
+        // SAFETY: we are draining [index+1..] and new median is on `index`,
         // so we are not overlapping.
         unsafe {
             let new_median: *mut Node = &mut self.edges[median_index][RIGHT_NODE_IDX];
@@ -138,6 +246,7 @@ impl Node {
 
         let mut new_median = self.edges.pop().unwrap();
 
+        // Finally, insert the new edge where it would have been in the first place.
         if index < B {
             self.try_raw_insert(index, new_edge).unwrap();
         } else {
@@ -147,6 +256,8 @@ impl Node {
         return new_median;
     }
 
+    /// Wrapper around `edges.try_insert` that also corrects the content of `edge`
+    /// if it is inserted as the leftmost element (index=0).
     fn try_raw_insert(&mut self, index: usize, edge: Edge) -> Result<(), Edge> {
         if let Err(err) = self.edges.try_insert(index, edge) {
             return Err(err.element());
@@ -157,42 +268,57 @@ impl Node {
         return Ok(());
     }
 
+    /// Function, that does... ummm.... stuff (TODO)
     fn index_zero_insertion_correction(&mut self) {
         let [first, second] = match self.edges.as_mut_slice() {
             [first, second, ..] => [first, second],
-            _ => unreachable!(),
+            _ => unreachable!("nodes must have at least two elements in them"),
         };
         debug_assert!(first[LEFT_NODE_IDX].edges.len() == 0);
-        first[LEFT_NODE_IDX].edges.extend(second[LEFT_NODE_IDX].edges.drain(..));
+
+        // Ughh.. have this been wrong the whole time?? (TODO)
+        let [first_left, first_right] = &mut **first;
+        first_left.edges.extend(first_right.edges.drain(..));
+        first_right.edges.extend(second[LEFT_NODE_IDX].edges.drain(..));
+
+        // This is the previous code
+        // first[LEFT_NODE_IDX].edges.extend(second[LEFT_NODE_IDX].edges.drain(..));
     }
 
+    /// The actual function that does insertion
     fn find_and_insert(&mut self, new_edge: Edge) -> InsertionResult {
         if self.edges.len() == 0 {
-            // Make the `let overflow_element = ...` a bit easier by using this.
-            // Still, you shouldn't call this method on an empty root for example.
+            // We're a leaf's child, we can't have items inserted,
+            // our parent must do so. Or we are an empty root, in this case,
+            // `Root::insert` will take care of this return value.
             return InsertionResult::Overflow(new_edge);
         }
 
+        // Binary search is the faster option here, see also `Self::contains`
         let edge = self.edges.binary_search_by_key(&new_edge.as_usize(), Unique::as_usize);
-        let (split_insertion_index, child_node) = match edge {
+        let insertion_index = match edge {
             Ok(_) => unreachable!("every Edge should be Unique"),
-            Err(0) => (0, &mut self.edges[0][LEFT_NODE_IDX]),
-            Err(i) => (i, &mut self.edges[i-1][RIGHT_NODE_IDX]),
+            Err(i) => i,
         };
-
+        let child_node = match insertion_index.checked_sub(1) {
+            None => &mut self.edges[0][LEFT_NODE_IDX],
+            Some(i) => &mut self.edges[i][RIGHT_NODE_IDX],
+        };
         let overflow_element = match child_node.find_and_insert(new_edge) {
             InsertionResult::Done => return InsertionResult::Done,
             InsertionResult::Overflow(e) => e,
         };
-
-        let overflow_element = match self.try_raw_insert(split_insertion_index, overflow_element) {
+        let overflow_element = match self.try_raw_insert(insertion_index, overflow_element) {
             Ok(()) => return InsertionResult::Done,
             Err(err) => err,
         };
 
-        let median = self.insert_split(split_insertion_index, overflow_element);
+        let median = self.insert_split(insertion_index, overflow_element);
         return InsertionResult::Overflow(median);
     }
+
+    // ----------------- END INSERTION CODE -----------------
+    // ----------------- BEGIN DELETION CODE ----------------
 
     fn try_remove(&mut self, index: usize) -> RemovalResult {
         let item = self.edges.remove(index);
@@ -361,7 +487,7 @@ impl Node {
         return self.check_size_and_ret(to_return);
     }
 
-    pub fn find_and_remove(&mut self, p: usize) -> RemovalResult {
+    fn find_and_remove(&mut self, p: usize) -> RemovalResult {
         if self.edges.is_empty() {
             return RemovalResult::NotFound;
         }

@@ -52,7 +52,7 @@ fn test1() {
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
-        assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
+        assert!(root.contains(p), "where is {:X}?\n{:?}", p, root);
     }
 
     #[cfg(not(miri))]
@@ -64,13 +64,13 @@ fn test1() {
     let now = Instant::now();
 
     for p in allocation_addresses {
-        assert!(root.search(p), "{:X} not found", p);
+        assert!(root.contains(p), "{:X} not found", p);
     }
 
     #[cfg(not(miri))]
     println!(" {:?}", now.elapsed());
 
-    assert!(root.search(0) == false);
+    assert!(root.contains(0) == false);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn test2() {
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
-        assert!(root.search(p), "where is {:X}?\n{:?}", p, root);
+        assert!(root.contains(p), "where is {:X}?\n{:?}", p, root);
     }
 
     #[cfg(not(miri))]
