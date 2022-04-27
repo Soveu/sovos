@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 #[cfg(not(miri))]
 use std::time::Instant;
 
-const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 2_000_000 };
+const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 800_000 };
 
 fn box_to_unique<T>(boxed: Box<T>) -> Unique<T> {
     unsafe { Unique::from_raw(Box::into_raw(boxed)) }
@@ -52,6 +52,7 @@ fn test1() {
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
+        //root.sanity_check();
         assert!(root.contains(p), "where is {:X}?\n{:?}", p, root);
     }
 
@@ -120,7 +121,7 @@ fn test2() {
         //println!("{:?}", root);
         //root.sanity_check();
         let res = ManuallyDrop::new(root.remove(p));
-        assert_eq!(res.as_ref().unwrap().as_usize(), p);
+        assert_eq!(Unique::as_usize(res.as_ref().unwrap()), p);
     }
 
     #[cfg(not(miri))]

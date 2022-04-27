@@ -225,7 +225,7 @@ impl Node {
         if index == B {
             // New edge is the median
             self.edges[B][LEFT_NODE_IDX].edges.extend(new_edge[RIGHT_NODE_IDX].edges.drain(..));
-            new_edge[0].edges.extend(self.edges.drain(B..));
+            new_edge[RIGHT_NODE_IDX].edges.extend(self.edges.drain(B..));
             return new_edge;
         }
 
@@ -250,7 +250,7 @@ impl Node {
         if index < B {
             self.try_raw_insert(index, new_edge).unwrap();
         } else {
-            new_median[0].try_raw_insert(index - B - 1, new_edge).unwrap();
+            new_median[RIGHT_NODE_IDX].try_raw_insert(index - B - 1, new_edge).unwrap();
         }
 
         return new_median;
@@ -295,7 +295,7 @@ impl Node {
         }
 
         // Binary search is the faster option here, see also `Self::contains`
-        let edge = self.edges.binary_search_by_key(&new_edge.as_usize(), Unique::as_usize);
+        let edge = self.edges.binary_search_by_key(&Unique::as_usize(&new_edge), Unique::as_usize);
         let insertion_index = match edge {
             Ok(_) => unreachable!("every Edge should be Unique"),
             Err(i) => i,
@@ -320,26 +320,8 @@ impl Node {
     // ----------------- END INSERTION CODE -----------------
     // ----------------- BEGIN DELETION CODE ----------------
 
-    fn try_remove(&mut self, index: usize) -> RemovalResult {
-        let item = self.edges.remove(index);
-        return self.check_size_and_ret(item);
-    }
-
-    fn push_and_flatten(&mut self, new: Edge) {
-        self.edges.push(new);
-        let last: *mut Self = &mut self.edges.last_mut().unwrap()[RIGHT_NODE_IDX];
-        // SAFETY: we are not aliasing + ArrayVec doesn't reallocate, so `last`
-        // is always valid here
-        unsafe {
-            let last = &mut *last;
-            let new_idx = self.edges.len();
-            self.edges.extend(last.edges.drain(..));
-            if let Some(x) = self.edges.get_mut(new_idx) {
-                last.edges.extend(x[LEFT_NODE_IDX].edges.drain(..));
-            }
-        }
-    }
-
+    /// Basically a helper function that takes an Edge and returns it back,
+    /// but wrapping it accordingly to `RemovalResult::Done` or `Underflow`
     fn check_size_and_ret(&self, to_return: Edge) -> RemovalResult {
         if self.edges.len() < B {
             return RemovalResult::Underflow(to_return);
@@ -347,11 +329,47 @@ impl Node {
         return RemovalResult::Done(to_return);
     }
 
+    /// Wrapper around `edges.remove` that wraps the `Edge` with `RemovalResult`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` >= `self.edges.len()`.
+    fn try_remove(&mut self, index: usize) -> RemovalResult {
+        let item = self.edges.remove(index);
+        return self.check_size_and_ret(item);
+    }
+
+    /// Function that takes an `Edge`, pushes it into `edges` and also
+    /// moves all the elements from the newly pushed `Edge` to the parent (self).
+    fn push_and_flatten(&mut self, new: Edge) {
+        self.edges.push(new);
+
+        // SAFETY: we are not aliasing + ArrayVec doesn't reallocate,
+        // so `last` is always valid here.
+        let last: *mut Self = &mut self.edges.last_mut().unwrap()[RIGHT_NODE_IDX];
+        unsafe {
+            let last = &mut *last;
+            let new_idx = self.edges.len();
+
+            // Move the allocations from child to parent.
+            self.edges.extend(last.edges.drain(..));
+
+            if let Some(x) = self.edges.get_mut(new_idx) {
+                // The previously leftmost edge is not leftmost anymore, we have
+                // to move the elements from it to its left neighbour.
+                last.edges.extend(x[LEFT_NODE_IDX].edges.drain(..));
+            }
+        }
+    }
+
+    /// Grabs the leaf, which is the next allocation in order to `self`.
     fn grab_leaf(&mut self) -> RemovalResult {
         if self.edges.is_empty() {
+            // `self` is itself a leaf.
             return RemovalResult::NotFound;
         }
         if self.edges[0][LEFT_NODE_IDX].edges.is_empty() {
+            // Child is a leaf, grab it.
             return self.try_remove(0);
         }
         return match self.edges[0][LEFT_NODE_IDX].grab_leaf() {
@@ -360,14 +378,20 @@ impl Node {
         };
     }
 
+    /// Replace and move contents of `self.edges[index]` to `src`
     fn replace(&mut self, index: usize, mut src: Edge) -> Edge {
         let dst = &mut self.edges[index];
+
+        // This is only called after grab_leaf
         debug_assert!(src[RIGHT_NODE_IDX].edges.is_empty());
+        debug_assert!(src[LEFT_NODE_IDX].edges.is_empty());
+
         src[RIGHT_NODE_IDX].edges.extend(dst[RIGHT_NODE_IDX].edges.drain(..));
         src[LEFT_NODE_IDX].edges.extend(dst[LEFT_NODE_IDX].edges.drain(..));
         return mem::replace(dst, src);
     }
 
+    /// Remove `self.edges[index]`, preserving the invariants of the tree
     fn remove(&mut self, index: usize) -> RemovalResult {
         return match self.edges[index][RIGHT_NODE_IDX].grab_leaf() {
             RemovalResult::NotFound => self.try_remove(index),
@@ -379,6 +403,19 @@ impl Node {
         };
     }
 
+    /// Unfortunetely, here we go into the unsafe jungle.
+    ///
+    /// I (the original author) wanted to do both `_rotate_left` and
+    /// `_rotate_right` as generically as possible and that unfortunetely
+    /// caused semi-shared mutability in some edge cases. Cell types could
+    /// probably solve the issue, but for a few edge cases I decided it is
+    /// not worth. At least I learned how to use Miri ;)
+    ///
+    /// # Safety
+    ///
+    /// * `parent` must be a valid pointer
+    /// * `left` must be a valid pointer, that comes from either
+    ///    `parent[LEFT_NODE_IDX]` or `left_neighbour_of_parent[RIGHT_NODE_IDX]`
     unsafe fn _rotate_left(left: *mut Self, parent: *mut Edge) {
         let (new_parent, rest) = (*parent)[RIGHT_NODE_IDX]
             .edges
@@ -405,6 +442,10 @@ impl Node {
         (*parent)[LEFT_NODE_IDX].edges.extend((*prev_parent_left).edges.drain(..));
     }
 
+    /// Tries to rebalance the tree by rotating the element
+    /// at `index` to the left.
+    ///
+    /// Return `true` if the rotation succeeded.
     fn try_rotate_left(&mut self, index: usize) -> bool {
         let edges: *mut [Edge] = &mut self.edges[..];
         let parent_index = index.saturating_sub(1);
@@ -426,6 +467,13 @@ impl Node {
         return false;
     }
 
+    /// Similar to `_rotate_left`, see its description.
+    ///
+    /// # Safety
+    ///
+    /// * `parent` must be a valid pointer
+    /// * `left` must be a valid pointer, that comes from either
+    ///    `parent[LEFT_NODE_IDX]` or `left_neighbour_of_parent[RIGHT_NODE_IDX]`
     unsafe fn _rotate_right(left: *mut Self, parent: *mut Edge) {
         let new_parent = (*left).edges.pop().unwrap();
         let mut old_parent = ptr::replace(parent, new_parent);
@@ -438,6 +486,10 @@ impl Node {
         (*parent)[RIGHT_NODE_IDX].push_and_flatten(old_parent);
     }
 
+    /// Tries to rebalance the tree by rotating the element
+    /// at `index` to the right.
+    ///
+    /// Return `true` if the rotation succeeded.
     fn try_rotate_right(&mut self, index: usize) -> bool {
         let edges: *mut [Edge] = &mut self.edges[..];
         let parent_index = index.saturating_sub(1);
@@ -460,8 +512,11 @@ impl Node {
         return false;
     }
 
+    /// Rebalances the tree, returning `to_return` in
+    /// `RemovalResult::Done` or `Underflow`.
+    /// `index` is the index of element previously removed.
     fn rebalance(&mut self, index: usize, to_return: Edge) -> RemovalResult {
-        assert!(
+        debug_assert!(
             index <= self.edges.len(),
             "index={} > len={}", index, self.edges.len()
         );
@@ -473,7 +528,7 @@ impl Node {
             return RemovalResult::Done(to_return);
         }
 
-        // Merge
+        // Can't rotate, so we have to merge
         let parent_index = index.saturating_sub(1);
         let mut removed_parent = self.edges.remove(parent_index);
         let to_append = match parent_index.checked_sub(1) {
@@ -487,6 +542,7 @@ impl Node {
         return self.check_size_and_ret(to_return);
     }
 
+    /// The actual function that does deletion.
     fn find_and_remove(&mut self, p: usize) -> RemovalResult {
         if self.edges.is_empty() {
             return RemovalResult::NotFound;
@@ -497,7 +553,6 @@ impl Node {
             Ok(i) => return self.remove(i),
             Err(i) => i,
         };
-
         let node = match index {
             0 => &mut self.edges[0][LEFT_NODE_IDX],
             i => &mut self.edges[i-1][RIGHT_NODE_IDX],
@@ -520,7 +575,7 @@ impl fmt::Debug for Node {
 
         let iter = self.edges
             .iter()
-            .map(|p| &p[0] as *const Node);
+            .map(|p| &p[RIGHT_NODE_IDX] as *const Node);
         let _ = f.debug_list()
             .entries(iter)
             .finish()?;
