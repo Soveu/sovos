@@ -11,7 +11,7 @@ fn box_to_unique<T>(boxed: Box<T>) -> Unique<T> {
     unsafe { Unique::from_raw(Box::into_raw(boxed)) }
 }
 fn new_edge() -> Edge {
-    let boxed = Box::new([Node::new(), Node::new()]);
+    let boxed = Box::new(Node::new());
     box_to_unique(boxed)
 }
 fn xorshift(mut x: u32) -> u32 {
