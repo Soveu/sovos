@@ -11,31 +11,13 @@ fn new_edge() -> Edge {
 }
 
 struct Buddy {
-    levels: [Option<Unique<Root>>; 16],
+    levels: [Root; 16],
 }
 
 impl Buddy {
     pub fn new() -> Self {
-        Self {
-            levels: [
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-            ],
-        }
+        const ROOT: Root = Root::new();
+        Self { levels: [ROOT; 16] }
     }
 
     pub fn insert(&mut self, mut e: Edge, i: usize) {

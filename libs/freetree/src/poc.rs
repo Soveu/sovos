@@ -9,8 +9,13 @@ pub const B: usize = 2;
 const TWO_B: usize = 2*B;
 
 /// The root of the tree, that manages `Node`s under the hood.
-#[derive(Debug)]
-pub struct Root(NodeInner);
+pub struct Root(Option<Edge>);
+
+impl fmt::Debug for Root {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.as_ref().map(|e| &e.right).fmt(f)
+    }
+}
 
 impl Root {
     /// Performs check of internal invariants of the tree
@@ -18,7 +23,9 @@ impl Root {
     /// # Panics
     /// Panics if invariants are not held
     pub fn sanity_check(&self) {
-        self.0.sanity_check()
+        if let Some(ref e) = self.0 {
+            e.right.sanity_check()
+        }
     }
 
     /// Creates a new, empty Root without any allocations
@@ -30,8 +37,8 @@ impl Root {
     ///
     /// let tree = Root::new();
     /// ```
-    pub fn new() -> Self {
-        Self(NodeInner::new())
+    pub const fn new() -> Self {
+        Self(None)
     }
 
     /// Inserts a new allocation into the tree.
@@ -51,16 +58,21 @@ impl Root {
     /// assert_eq!(tree.contains(address), true);
     /// ```
     pub fn insert(&mut self, new_edge: Edge) {
+        let root = match self.0 {
+            None => return self.0 = Some(new_edge),
+            Some(ref mut e) => &mut e.right,
+        };
+
         // This will work, even on empty root, because find_and_insert
         // will return `Overflow` if `edges.len() == 0`
-        let mut new_median = match self.0.find_and_insert(new_edge) {
+        let mut new_median = match root.find_and_insert(new_edge) {
             InsertionResult::Done => return,
             InsertionResult::Overflow(e) => e,
         };
 
-        let remainder = self.0.edges.drain(..);
+        let remainder = root.edges.drain(..);
         new_median.left.edges.extend(remainder);
-        self.0.edges.push(new_median);
+        root.edges.push(new_median);
     }
 
     /// Returns `true` if the tree contains an allocation that starts with address `addr`.
@@ -83,7 +95,12 @@ impl Root {
     /// assert_eq!(tree.contains(address), false);
     /// ```
     pub fn contains(&self, addr: usize) -> bool {
-        self.0.contains(addr)
+        let e = match self.0 {
+            Some(ref e) => e,
+            None => return false,
+        };
+
+        return Unique::as_usize(e) == addr || e.right.contains(addr);
     }
 
     /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
@@ -107,10 +124,22 @@ impl Root {
     /// # core::mem::forget(allocation);
     /// ```
     pub fn remove(&mut self, addr: usize) -> Option<Edge> {
-        match self.0.find_and_remove(addr) {
-            RemovalResult::NotFound => None,
-            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        let root = match self.0 {
+            Some(ref mut e) => e,
+            None => return None,
+        };
+
+        if Unique::as_usize(root) != addr {
+            return root.right.find_and_remove(addr).into();
         }
+
+        if let Some(new_root) = root.right.pop().into() {
+            let mut old_root = mem::replace(root, new_root);
+            root.right.edges.extend(old_root.right.edges.drain(..));
+            return Some(old_root);
+        }
+
+        return self.0.take();
     }
 
     /// Removes the rightmost allocation from the tree
@@ -133,8 +162,12 @@ impl Root {
     /// assert!(c > d);
     /// ```
     pub fn pop(&mut self) -> Option<Edge> {
-        match self.0.pop() {
-            RemovalResult::NotFound => None,
+        let root = match self.0 {
+            Some(ref mut e) => e,
+            None => return None,
+        };
+        match root.right.pop() {
+            RemovalResult::NotFound => self.0.take(),
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
         }
     }
@@ -186,6 +219,15 @@ enum RemovalResult {
 
     /// The allocation has been found and removed. Rebalancing _is_ needed.
     Underflow(Edge),
+}
+
+impl Into<Option<Edge>> for RemovalResult {
+    fn into(self) -> Option<Edge> {
+        match self {
+            RemovalResult::NotFound => None,
+            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        }
+    }
 }
 
 impl NodeInner {
@@ -544,7 +586,8 @@ impl NodeInner {
 
     /// Rebalances the tree, returning `to_return` in
     /// `RemovalResult::Done` or `Underflow`.
-    /// `index` is the index of element previously removed.
+    /// `index` is the index of the affected edge.
+    /// (0 = edges[0].left, 1 = edges[0].right, 2 = edges[1].right and so on)
     fn rebalance(&mut self, index: usize, to_return: Edge) -> RemovalResult {
         debug_assert!(
             index <= self.edges.len(),
@@ -595,15 +638,15 @@ impl NodeInner {
     }
 
     fn pop(&mut self) -> RemovalResult {
-        let last_index = match self.edges.len().checked_sub(1) {
+        let edge_index = self.edges.len();
+        let node = match edge_index.checked_sub(1) {
             None => return RemovalResult::NotFound,
-            Some(x) => x,
+            Some(i) => &mut self.edges[i].right,
         };
-        let node = &mut self.edges[last_index];
 
-        return match node.right.pop() {
-            RemovalResult::NotFound => self.remove(last_index),
-            RemovalResult::Underflow(e) => self.rebalance(last_index, e),
+        return match node.pop() {
+            RemovalResult::NotFound => self.remove(edge_index - 1),
+            RemovalResult::Underflow(e) => self.rebalance(edge_index, e),
             RemovalResult::Done(e) => RemovalResult::Done(e),
         };
     }
