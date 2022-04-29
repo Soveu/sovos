@@ -7,13 +7,11 @@ use std::time::Instant;
 
 const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 800_000 };
 
-fn box_to_unique<T>(boxed: Box<T>) -> Unique<T> {
-    unsafe { Unique::from_raw(Box::into_raw(boxed)) }
-}
 fn new_edge() -> Edge {
     let boxed = Box::new(Node::new());
-    box_to_unique(boxed)
+    unsafe { Unique::from_raw(Box::into_raw(boxed)) }
 }
+
 fn xorshift(mut x: u32) -> u32 {
     x ^= x << 13;
     x ^= x >> 17;
@@ -22,7 +20,7 @@ fn xorshift(mut x: u32) -> u32 {
 }
 
 #[test]
-fn test1() {
+fn test_insertion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
     let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)
@@ -75,7 +73,7 @@ fn test1() {
 }
 
 #[test]
-fn test2() {
+fn test_deletion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
     let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)

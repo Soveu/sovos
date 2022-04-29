@@ -112,6 +112,32 @@ impl Root {
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
         }
     }
+
+    /// Removes the rightmost allocation from the tree
+    /// (the pointer with the highest value).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let mut tree = Root::new();
+    ///
+    /// tree.insert(a);
+    /// tree.insert(b);
+    /// let c = tree.pop().unwrap();
+    /// let d = tree.pop().unwrap();
+    ///
+    /// let c = &*c as *const _;
+    /// let d = &*d as *const _;
+    /// assert!(c > d);
+    /// ```
+    pub fn pop(&mut self) -> Option<Edge> {
+        match self.0.pop() {
+            RemovalResult::NotFound => None,
+            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        }
+    }
 }
 
 /// The type that is used both as a key and a pointer to
@@ -565,6 +591,20 @@ impl NodeInner {
         return match node.find_and_remove(p) {
             RemovalResult::Underflow(e) => self.rebalance(index, e),
             x => x,
+        };
+    }
+
+    fn pop(&mut self) -> RemovalResult {
+        let last_index = match self.edges.len().checked_sub(1) {
+            None => return RemovalResult::NotFound,
+            Some(x) => x,
+        };
+        let node = &mut self.edges[last_index];
+
+        return match node.right.pop() {
+            RemovalResult::NotFound => self.remove(last_index),
+            RemovalResult::Underflow(e) => self.rebalance(last_index, e),
+            RemovalResult::Done(e) => RemovalResult::Done(e),
         };
     }
 }
