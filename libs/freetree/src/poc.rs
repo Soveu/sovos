@@ -133,7 +133,7 @@ impl Root {
             return root.right.find_and_remove(addr).into();
         }
 
-        if let Some(new_root) = root.right.pop().into() {
+        if let Some(new_root) = root.right.pop_last().into() {
             let mut old_root = mem::replace(root, new_root);
             root.right.edges.extend(old_root.right.edges.drain(..));
             return Some(old_root);
@@ -161,12 +161,23 @@ impl Root {
     /// let d = &*d as *const _;
     /// assert!(c > d);
     /// ```
-    pub fn pop(&mut self) -> Option<Edge> {
+    pub fn pop_last(&mut self) -> Option<Edge> {
         let root = match self.0 {
             Some(ref mut e) => e,
             None => return None,
         };
-        match root.right.pop() {
+        match root.right.pop_last() {
+            RemovalResult::NotFound => self.0.take(),
+            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        }
+    }
+
+    pub fn pop_first(&mut self) -> Option<Edge> {
+        let root = match self.0 {
+            Some(ref mut e) => e,
+            None => return None,
+        };
+        match root.right.pop_first() {
             RemovalResult::NotFound => self.0.take(),
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
         }
@@ -431,30 +442,11 @@ impl NodeInner {
         }
     }
 
-    /// Grabs the leaf, which is the next allocation in order to `self`.
-    fn grab_leaf(&mut self) -> RemovalResult {
-        if self.edges.is_empty() {
-            // `self` is itself a leaf.
-            return RemovalResult::NotFound;
-        }
-        if self.edges[0].left.edges.is_empty() {
-            // Child is a leaf, grab it.
-            return self.try_remove(0);
-        }
-        return match self.edges[0].left.grab_leaf() {
-            RemovalResult::Underflow(leaf) => self.rebalance(0, leaf),
-            x => x,
-        };
-    }
-
     /// Replace and move contents of `self.edges[index]` to `src`
     fn replace(&mut self, index: usize, mut src: Edge) -> Edge {
         let dst = &mut self.edges[index];
-
-        // This is only called after grab_leaf
         debug_assert!(src.right.edges.is_empty());
         debug_assert!(src.left.edges.is_empty());
-
         src.right.edges.extend(dst.right.edges.drain(..));
         src.left.edges.extend(dst.left.edges.drain(..));
         return mem::replace(dst, src);
@@ -462,7 +454,7 @@ impl NodeInner {
 
     /// Remove `self.edges[index]`, preserving the invariants of the tree
     fn remove(&mut self, index: usize) -> RemovalResult {
-        return match self.edges[index].right.grab_leaf() {
+        return match self.edges[index].right.pop_first() {
             RemovalResult::NotFound => self.try_remove(index),
             RemovalResult::Done(leaf) => RemovalResult::Done(self.replace(index, leaf)),
             RemovalResult::Underflow(leaf) => {
@@ -637,16 +629,26 @@ impl NodeInner {
         };
     }
 
-    fn pop(&mut self) -> RemovalResult {
+    fn pop_last(&mut self) -> RemovalResult {
         let edge_index = self.edges.len();
         let node = match edge_index.checked_sub(1) {
             None => return RemovalResult::NotFound,
             Some(i) => &mut self.edges[i].right,
         };
-
-        return match node.pop() {
-            RemovalResult::NotFound => self.remove(edge_index - 1),
+        return match node.pop_last() {
+            RemovalResult::NotFound => self.try_remove(edge_index - 1),
             RemovalResult::Underflow(e) => self.rebalance(edge_index, e),
+            RemovalResult::Done(e) => RemovalResult::Done(e),
+        };
+    }
+
+    fn pop_first(&mut self) -> RemovalResult {
+        if self.edges.is_empty() {
+            return RemovalResult::NotFound;
+        }
+        return match self.edges[0].left.pop_first() {
+            RemovalResult::NotFound => self.try_remove(0),
+            RemovalResult::Underflow(e) => self.rebalance(0, e),
             RemovalResult::Done(e) => RemovalResult::Done(e),
         };
     }
