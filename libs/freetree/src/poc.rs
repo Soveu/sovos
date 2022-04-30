@@ -1,7 +1,7 @@
 use crate::Unique;
 use arrayvec::ArrayVec;
-use core::{mem, fmt};
-use core::ptr;
+use core::{ptr, mem, fmt};
+use core::cmp::Ordering;
 
 /// The B constant, that determines the "width" of a Node.
 /// Higher value means flatter tree, but also higher costs of operations.
@@ -13,7 +13,7 @@ pub struct Root(Option<Edge>);
 
 impl fmt::Debug for Root {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.as_ref().map(|e| &e.right).fmt(f)
+        self.0.as_ref().map(|e| (&e.right, &e.left)).fmt(f)
     }
 }
 
@@ -24,7 +24,8 @@ impl Root {
     /// Panics if invariants are not held
     pub fn sanity_check(&self) {
         if let Some(ref e) = self.0 {
-            e.right.sanity_check()
+            e.right.sanity_check();
+            e.left.sanity_check();
         }
     }
 
@@ -60,7 +61,12 @@ impl Root {
     pub fn insert(&mut self, new_edge: Edge) {
         let root = match self.0 {
             None => return self.0 = Some(new_edge),
-            Some(ref mut e) => &mut e.right,
+            Some(ref mut e) => e,
+        };
+        let root = if Unique::as_usize(root) < Unique::as_usize(&new_edge) {
+            &mut root.right
+        } else {
+            &mut root.left
         };
 
         // This will work, even on empty root, because find_and_insert
@@ -100,7 +106,11 @@ impl Root {
             None => return false,
         };
 
-        return Unique::as_usize(e) == addr || e.right.contains(addr);
+        match Unique::as_usize(e).cmp(&addr) {
+            Ordering::Equal => true,
+            Ordering::Less => e.right.contains(addr),
+            Ordering::Greater => e.left.contains(addr),
+        }
     }
 
     /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
@@ -129,17 +139,23 @@ impl Root {
             None => return None,
         };
 
-        if Unique::as_usize(root) != addr {
-            return root.right.find_and_remove(addr).into();
-        }
+        let root = match Unique::as_usize(root).cmp(&addr) {
+            Ordering::Equal => return match root.right.pop_first().into_option()
+                .or_else(|| root.left.pop_last().into_option())
+            {
+                None => self.0.take(),
+                Some(new_root) => {
+                    let mut old_root = mem::replace(root, new_root);
+                    root.right.edges.extend(old_root.right.edges.drain(..));
+                    root.left.edges.extend(old_root.left.edges.drain(..));
+                    Some(old_root)
+                },
+            },
+            Ordering::Less => &mut root.right,
+            Ordering::Greater => &mut root.left,
+        };
 
-        if let Some(new_root) = root.right.pop_last().into() {
-            let mut old_root = mem::replace(root, new_root);
-            root.right.edges.extend(old_root.right.edges.drain(..));
-            return Some(old_root);
-        }
-
-        return self.0.take();
+        return root.find_and_remove(addr).into_option();
     }
 
     /// Removes the rightmost allocation from the tree
@@ -166,9 +182,9 @@ impl Root {
             Some(ref mut e) => e,
             None => return None,
         };
-        match root.right.pop_last() {
-            RemovalResult::NotFound => self.0.take(),
-            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        match Self::_action(root, NodeInner::pop_last) {
+            Some(x) => Some(x),
+            None => self.0.take(),
         }
     }
 
@@ -177,10 +193,20 @@ impl Root {
             Some(ref mut e) => e,
             None => return None,
         };
-        match root.right.pop_first() {
-            RemovalResult::NotFound => self.0.take(),
-            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
+        match Self::_action(root, NodeInner::pop_first) {
+            Some(x) => Some(x),
+            None => self.0.take(),
         }
+    }
+
+    fn _action<F>(root: &mut Edge, f: F) -> Option<Edge>
+    where
+        F: Fn(&mut NodeInner) -> RemovalResult,
+    {
+        if let Some(e) = f(&mut root.right).into_option() {
+            return Some(e);
+        }
+        return f(&mut root.left).into_option();
     }
 }
 
@@ -232,8 +258,8 @@ enum RemovalResult {
     Underflow(Edge),
 }
 
-impl Into<Option<Edge>> for RemovalResult {
-    fn into(self) -> Option<Edge> {
+impl RemovalResult {
+    fn into_option(self) -> Option<Edge> {
         match self {
             RemovalResult::NotFound => None,
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),

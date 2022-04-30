@@ -5,7 +5,7 @@ use std::mem::ManuallyDrop;
 #[cfg(not(miri))]
 use std::time::Instant;
 
-const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 800_000 };
+const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 999_999 };
 
 fn new_edge() -> Edge {
     let boxed = Box::new(Node::new());

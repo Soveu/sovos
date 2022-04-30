@@ -3,7 +3,7 @@ use freetree::Unique;
 use std::mem::ManuallyDrop;
 use std::time::Instant;
 
-const TEST_ALLOCATIONS: usize = 2_000;
+const TEST_ALLOCATIONS: usize = 999_999;
 
 fn new_edge() -> Edge {
     let boxed = Box::new(Node::new());
@@ -45,7 +45,7 @@ impl Buddy {
             return None;
         }
 
-        if let Some(e) = self.levels[i].pop() {
+        if let Some(e) = self.levels[i].pop_last() {
             return Some(e);
         }
 
