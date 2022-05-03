@@ -11,13 +11,30 @@ fn new_edge() -> Edge {
 }
 
 struct Buddy {
-    levels: [Root; 16],
+    levels: [Box<Root>; 15],
 }
 
 impl Buddy {
     pub fn new() -> Self {
-        const ROOT: Root = Root::new();
-        Self { levels: [ROOT; 16] }
+        Self {
+            levels: [
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+                Box::new(Root::new()),
+            ]
+        }
     }
 
     pub fn insert(&mut self, mut e: Edge, i: usize) {
@@ -45,7 +62,7 @@ impl Buddy {
             return None;
         }
 
-        if let Some(e) = self.levels[i].pop() {
+        if let Some(e) = self.levels[i].pop_last() {
             return Some(e);
         }
 

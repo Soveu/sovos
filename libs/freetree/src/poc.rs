@@ -9,13 +9,8 @@ pub const B: usize = 2;
 const TWO_B: usize = 2*B;
 
 /// The root of the tree, that manages `Node`s under the hood.
-pub struct Root(Option<Edge>);
-
-impl fmt::Debug for Root {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.as_ref().map(|e| &e.right).fmt(f)
-    }
-}
+#[derive(Debug)]
+pub struct Root(NodeInner);
 
 impl Root {
     /// Performs check of internal invariants of the tree
@@ -23,9 +18,7 @@ impl Root {
     /// # Panics
     /// Panics if invariants are not held
     pub fn sanity_check(&self) {
-        if let Some(ref e) = self.0 {
-            e.right.sanity_check()
-        }
+        self.0.sanity_check()
     }
 
     /// Creates a new, empty Root without any allocations
@@ -37,8 +30,8 @@ impl Root {
     ///
     /// let tree = Root::new();
     /// ```
-    pub const fn new() -> Self {
-        Self(None)
+    pub fn new() -> Self {
+        Self(NodeInner::new())
     }
 
     /// Inserts a new allocation into the tree.
@@ -58,10 +51,7 @@ impl Root {
     /// assert_eq!(tree.contains(address), true);
     /// ```
     pub fn insert(&mut self, new_edge: Edge) {
-        let root = match self.0 {
-            None => return self.0 = Some(new_edge),
-            Some(ref mut e) => &mut e.right,
-        };
+        let root = &mut self.0;
 
         // This will work, even on empty root, because find_and_insert
         // will return `Overflow` if `edges.len() == 0`
@@ -95,12 +85,7 @@ impl Root {
     /// assert_eq!(tree.contains(address), false);
     /// ```
     pub fn contains(&self, addr: usize) -> bool {
-        let e = match self.0 {
-            Some(ref e) => e,
-            None => return false,
-        };
-
-        return Unique::as_usize(e) == addr || e.right.contains(addr);
+        self.0.contains(addr)
     }
 
     /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
@@ -124,22 +109,7 @@ impl Root {
     /// # core::mem::forget(allocation);
     /// ```
     pub fn remove(&mut self, addr: usize) -> Option<Edge> {
-        let root = match self.0 {
-            Some(ref mut e) => e,
-            None => return None,
-        };
-
-        if Unique::as_usize(root) != addr {
-            return root.right.find_and_remove(addr).into();
-        }
-
-        if let Some(new_root) = root.right.pop_last().into() {
-            let mut old_root = mem::replace(root, new_root);
-            root.right.edges.extend(old_root.right.edges.drain(..));
-            return Some(old_root);
-        }
-
-        return self.0.take();
+        self.0.find_and_remove(addr).into()
     }
 
     /// Removes the rightmost allocation from the tree
@@ -154,33 +124,38 @@ impl Root {
     ///
     /// tree.insert(a);
     /// tree.insert(b);
-    /// let c = tree.pop().unwrap();
-    /// let d = tree.pop().unwrap();
+    /// let c = tree.pop_last().unwrap();
+    /// let d = tree.pop_last().unwrap();
     ///
     /// let c = &*c as *const _;
     /// let d = &*d as *const _;
     /// assert!(c > d);
     /// ```
     pub fn pop_last(&mut self) -> Option<Edge> {
-        let root = match self.0 {
-            Some(ref mut e) => e,
-            None => return None,
-        };
-        match root.right.pop_last() {
-            RemovalResult::NotFound => self.0.take(),
-            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
-        }
+        self.0.pop_last().into()
     }
 
+    /// Removes the leftmost allocation from the tree
+    /// (the pointer with the lowest value).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use freetree::Root;
+    ///
+    /// let mut tree = Root::new();
+    ///
+    /// tree.insert(a);
+    /// tree.insert(b);
+    /// let c = tree.pop_first().unwrap();
+    /// let d = tree.pop_first().unwrap();
+    ///
+    /// let c = &*c as *const _;
+    /// let d = &*d as *const _;
+    /// assert!(c < d);
+    /// ```
     pub fn pop_first(&mut self) -> Option<Edge> {
-        let root = match self.0 {
-            Some(ref mut e) => e,
-            None => return None,
-        };
-        match root.right.pop_first() {
-            RemovalResult::NotFound => self.0.take(),
-            RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
-        }
+        self.0.pop_first().into()
     }
 }
 
