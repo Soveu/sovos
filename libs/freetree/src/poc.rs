@@ -55,7 +55,7 @@ impl Root {
 
         // This will work, even on empty root, because find_and_insert
         // will return `Overflow` if `edges.len() == 0`
-        let mut new_median = match root.find_and_insert(new_edge) {
+        let mut new_median = match root.find_and_insert(new_edge, Unique::addr) {
             InsertionResult::Done => return,
             InsertionResult::Overflow(e) => e,
         };
@@ -85,7 +85,7 @@ impl Root {
     /// assert_eq!(tree.contains(address), false);
     /// ```
     pub fn contains(&self, addr: usize) -> bool {
-        self.0.contains(addr)
+        self.0.contains(addr, Unique::addr)
     }
 
     /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
@@ -109,7 +109,7 @@ impl Root {
     /// # core::mem::forget(allocation);
     /// ```
     pub fn remove(&mut self, addr: usize) -> Option<Edge> {
-        self.0.find_and_remove(addr).into()
+        self.0.find_and_remove(addr, Unique::addr).into()
     }
 
     /// Removes the rightmost allocation from the tree
@@ -258,14 +258,14 @@ impl NodeInner {
     /// Returns if an allocation starting with `p` exists in the tree.
     ///
     /// For examples, see `Root::contains`
-    fn contains(&self, p: usize) -> bool {
+    fn contains(&self, p: usize, f: impl Fn(&Edge) -> usize) -> bool {
         // Root and leaves' children have no elements
         if self.edges.len() == 0 {
             return false;
         }
 
         // Binary search is around 20% faster than linear one, depending on B
-        let node = match self.edges.binary_search_by_key(&p, Unique::addr) {
+        let node = match self.edges.binary_search_by_key(&p, &f) {
             // The element was found
             Ok(_) => return true,
             // The element is smaller than the smallest edge, so it must be on the left
@@ -273,7 +273,7 @@ impl NodeInner {
             Err(i) => &self.edges[i-1].right,
         };
 
-        return node.contains(p);
+        return node.contains(p, f);
     }
 
     // ----------------- BEGIN INSERTION CODE ---------------
@@ -342,7 +342,7 @@ impl NodeInner {
     }
 
     /// The actual function that does insertion
-    fn find_and_insert(&mut self, new_edge: Edge) -> InsertionResult {
+    fn find_and_insert(&mut self, new_edge: Edge, f: impl Fn(&Edge) -> usize) -> InsertionResult {
         if self.edges.len() == 0 {
             // We're a leaf's child, we can't have items inserted,
             // our parent must do so. Or we are an empty root, in this case,
@@ -351,7 +351,7 @@ impl NodeInner {
         }
 
         // Binary search is the faster option here, see also `Self::contains`
-        let edge = self.edges.binary_search_by_key(&Unique::addr(&new_edge), Unique::addr);
+        let edge = self.edges.binary_search_by_key(&(&f)(&new_edge), &f);
         let insertion_index = match edge {
             Ok(_) => unreachable!("every Edge should be Unique"),
             Err(i) => i,
@@ -360,7 +360,7 @@ impl NodeInner {
             None => &mut self.edges[0].left,
             Some(i) => &mut self.edges[i].right,
         };
-        let overflow_element = match child_node.find_and_insert(new_edge) {
+        let overflow_element = match child_node.find_and_insert(new_edge, f) {
             InsertionResult::Done => return InsertionResult::Done,
             InsertionResult::Overflow(e) => e,
         };
@@ -584,12 +584,12 @@ impl NodeInner {
     }
 
     /// The actual function that does deletion.
-    fn find_and_remove(&mut self, p: usize) -> RemovalResult {
+    fn find_and_remove(&mut self, p: usize, f: impl Fn(&Edge) -> usize) -> RemovalResult {
         if self.edges.is_empty() {
             return RemovalResult::NotFound;
         }
 
-        let index = self.edges.binary_search_by_key(&p, Unique::addr);
+        let index = self.edges.binary_search_by_key(&p, &f);
         let index = match index {
             Ok(i) => return self.remove(i),
             Err(i) => i,
@@ -599,7 +599,7 @@ impl NodeInner {
             i => &mut self.edges[i-1].right,
         };
 
-        return match node.find_and_remove(p) {
+        return match node.find_and_remove(p, f) {
             RemovalResult::Underflow(e) => self.rebalance(index, e),
             x => x,
         };
