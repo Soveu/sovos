@@ -5,7 +5,7 @@ use core::ptr;
 
 /// The B constant, that determines the "width" of a Node.
 /// Higher value means flatter tree, but also higher costs of operations.
-pub const B: usize = 2;
+pub const B: usize = (2048 - 8) / 16;
 const TWO_B: usize = 2*B;
 
 /// The root of the tree, that manages `Node`s under the hood.
@@ -163,7 +163,7 @@ impl Root {
 /// child(ren) in the tree
 pub type Edge = Unique<Node>;
 
-#[repr(C)]
+#[repr(C, align(4096))]
 pub struct Node {
     right: NodeInner,
     left: NodeInner,
@@ -181,6 +181,7 @@ impl Node {
 /// An ArrayVec of `Edge`s that can hold up to 2*B elements.
 /// All of the core methods are non-public and `Root`
 /// should be used instead.
+#[repr(align(2048))]
 struct NodeInner{
     edges: ArrayVec<Edge, TWO_B>,
 }
@@ -229,7 +230,7 @@ impl NodeInner {
         }
 
         assert!(
-            self.edges.is_sorted_by_key(Unique::as_usize),
+            self.edges.is_sorted_by_key(Unique::addr),
             "ERROR: self.edges is NOT sorted",
         );
 
@@ -264,7 +265,7 @@ impl NodeInner {
         }
 
         // Binary search is around 20% faster than linear one, depending on B
-        let node = match self.edges.binary_search_by_key(&p, Unique::as_usize) {
+        let node = match self.edges.binary_search_by_key(&p, Unique::addr) {
             // The element was found
             Ok(_) => return true,
             // The element is smaller than the smallest edge, so it must be on the left
@@ -350,7 +351,7 @@ impl NodeInner {
         }
 
         // Binary search is the faster option here, see also `Self::contains`
-        let edge = self.edges.binary_search_by_key(&Unique::as_usize(&new_edge), Unique::as_usize);
+        let edge = self.edges.binary_search_by_key(&Unique::addr(&new_edge), Unique::addr);
         let insertion_index = match edge {
             Ok(_) => unreachable!("every Edge should be Unique"),
             Err(i) => i,
@@ -588,7 +589,7 @@ impl NodeInner {
             return RemovalResult::NotFound;
         }
 
-        let index = self.edges.binary_search_by_key(&p, Unique::as_usize);
+        let index = self.edges.binary_search_by_key(&p, Unique::addr);
         let index = match index {
             Ok(i) => return self.remove(i),
             Err(i) => i,

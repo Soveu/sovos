@@ -29,7 +29,7 @@ fn test_insertion() {
         .collect();
     let allocation_addresses: Vec<_> = allocations
         .iter()
-        .map(Unique::as_usize)
+        .map(Unique::addr)
         .collect();
 
     for i in 0..allocations.len() {
@@ -46,7 +46,7 @@ fn test_insertion() {
     let now = Instant::now();
 
     for edge in allocations.into_iter() {
-        let p = Unique::as_usize(&edge);
+        let p = Unique::addr(&edge);
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
@@ -82,7 +82,7 @@ fn test_deletion() {
         .collect();
     let mut allocation_addresses: Vec<_> = allocations
         .iter()
-        .map(Unique::as_usize)
+        .map(Unique::addr)
         .collect();
 
     for i in 0..allocations.len() {
@@ -100,7 +100,7 @@ fn test_deletion() {
     let now = Instant::now();
 
     for edge in allocations.into_iter() {
-        let p = Unique::as_usize(&edge);
+        let p = Unique::addr(&edge);
         //println!("\nInserting {:x}", p);
         //println!("{:?}", root);
         root.insert(edge);
@@ -119,7 +119,7 @@ fn test_deletion() {
         //println!("{:?}", root);
         //root.sanity_check();
         let res = ManuallyDrop::new(root.remove(p));
-        assert_eq!(Unique::as_usize(res.as_ref().unwrap()), p);
+        assert_eq!(res.as_ref().map(Unique::addr), Some(p));
     }
 
     #[cfg(not(miri))]

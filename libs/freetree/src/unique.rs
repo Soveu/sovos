@@ -61,7 +61,12 @@ impl<T: ?Sized> Unique<T> {
 
 impl<T> Unique<T> {
     /// Returns the inner pointer as usize.
-    pub fn as_usize(seif: &Self) -> usize {
-        seif.0.as_ptr() as usize
+    pub fn addr(seif: &Self) -> usize {
+        seif.0.as_ptr().addr()
+    }
+
+    /// Returns the inner pointer as usize.
+    pub fn expose_addr(seif: &Self) -> usize {
+        seif.0.as_ptr().expose_addr()
     }
 }
