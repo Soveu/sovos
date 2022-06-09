@@ -1,6 +1,5 @@
 #![no_std]
 #![allow(unused_parens)]
-
 #![feature(is_sorted)]
 #![feature(slice_ptr_len)]
 #![feature(slice_ptr_get)]
@@ -18,9 +17,9 @@
 //!
 //! ```
 //! struct Node<T: Ord> {
-//!     left: Option<Box<Node<T>>>,
+//!     left:  Option<Box<Node<T>>>,
 //!     right: Option<Box<Node<T>>>,
-//!     key: T,
+//!     key:   T,
 //! }
 //! ```
 //!
@@ -60,7 +59,7 @@
 //! ```
 //! type Node = Box<NodeInner>;
 //! struct NodeInner {
-//!     left: Option<Node>,
+//!     left:  Option<Node>,
 //!     right: Option<Node>,
 //! }
 //! ```
@@ -93,7 +92,7 @@
 //! This does waste half of the memory, but remember, this is re-used,
 //! deallocated memory. A freelist would use only `size_of::<*mut u8>()` bytes!
 
-
 mod unique;
 pub use unique::Unique;
+pub mod buddy;
 pub mod poc;

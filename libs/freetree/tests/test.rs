@@ -1,9 +1,9 @@
-use freetree::poc::*;
-use freetree::Unique;
 use std::mem::ManuallyDrop;
-
 #[cfg(not(miri))]
 use std::time::Instant;
+
+use freetree::poc::*;
+use freetree::Unique;
 
 const TEST_ALLOCATIONS: usize = if cfg!(miri) { 200 } else { 800_000 };
 
@@ -23,14 +23,9 @@ fn xorshift(mut x: u32) -> u32 {
 fn test_insertion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)
-        .into_iter()
-        .map(|_| new_edge())
-        .collect();
-    let allocation_addresses: Vec<_> = allocations
-        .iter()
-        .map(Unique::addr)
-        .collect();
+    let mut allocations: Vec<_> =
+        (0..TEST_ALLOCATIONS).into_iter().map(|_| new_edge()).collect();
+    let allocation_addresses: Vec<_> = allocations.iter().map(Unique::addr).collect();
 
     for i in 0..allocations.len() {
         seed = xorshift(seed);
@@ -76,14 +71,9 @@ fn test_insertion() {
 fn test_deletion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
-    let mut allocations: Vec<_> = (0..TEST_ALLOCATIONS)
-        .into_iter()
-        .map(|_| new_edge())
-        .collect();
-    let mut allocation_addresses: Vec<_> = allocations
-        .iter()
-        .map(Unique::addr)
-        .collect();
+    let mut allocations: Vec<_> =
+        (0..TEST_ALLOCATIONS).into_iter().map(|_| new_edge()).collect();
+    let mut allocation_addresses: Vec<_> = allocations.iter().map(Unique::addr).collect();
 
     for i in 0..allocations.len() {
         seed = xorshift(seed);

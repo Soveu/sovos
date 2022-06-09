@@ -24,6 +24,7 @@ impl<T: ?Sized> fmt::Debug for Unique<T> {
 
 impl<T: ?Sized> Deref for Unique<T> {
     type Target = T;
+
     fn deref(&self) -> &Self::Target {
         unsafe { self.0.as_ref() }
     }

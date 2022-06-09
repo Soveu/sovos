@@ -1,111 +1,123 @@
 #![feature(strict_provenance)]
 
-use freetree::poc::*;
-use freetree::Unique;
 use std::mem::ManuallyDrop;
+use std::num::NonZeroU8;
+use std::time::Instant;
+
+use freetree::buddy::*;
+use freetree::Unique;
+
+fn xorshift(mut x: u32) -> u32 {
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return x;
+}
 
 struct Buddy {
-    levels: [Box<Root>; 15],
+    levels: [Box<BuddyLevel>; 12],
 }
 
 impl Buddy {
     pub fn new() -> Self {
         Self {
             levels: [
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-                Box::new(Root::new()),
-            ]
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+                Box::new(BuddyLevel::new()),
+            ],
         }
     }
 
-    pub fn insert(&mut self, mut e: Edge, i: usize) {
-        if i == 15 {
-            self.levels[15].insert(e);
-            return;
+    pub fn insert(&mut self, node: Node, i: usize) {
+        if i == self.levels.len() - 1 {
+            panic!("bruh");
         }
 
-        let e_addr = Unique::addr(&e);
-        let offset = 1 << (12 + i);
-        let modulo = offset * 2;
-        let buddy_addr = if e_addr % modulo == 0 {
-            e_addr + offset
-        } else {
-            e_addr - offset
+        let big = match self.levels[i].insert(node, i as u8) {
+            Some(big) => big,
+            None => return,
         };
-        println!("{:X} {:X} i={}", e_addr, buddy_addr, i);
-        let mut buddy = match self.levels[i].remove(buddy_addr) {
-            None => return self.levels[i].insert(e),
-            Some(b) => b,
-        };
-
-        if e_addr > buddy_addr {
-            std::mem::swap(&mut buddy, &mut e);
-        }
-        let exposed = Unique::expose_addr(&buddy);
-        println!("Exposing {:X}", exposed);
-        std::mem::forget(buddy);
-        return self.insert(e, i+1);
+        return self.insert(big, i + 1);
     }
 
-    pub fn pop(&mut self, i: usize) -> Option<Edge> {
-        if i >= 16 {
+    pub fn pop(&mut self, i: usize) -> Option<Node> {
+        if i >= self.levels.len() {
             return None;
         }
 
-        if let Some(e) = self.levels[i].pop_last() {
-            return Some(e);
+        if let Some(n) = self.levels[i].pop_last(i as u8) {
+            return Some(n);
         }
 
-        let mut left = self.pop(i + 1)?;
-        let offset = 1usize << (12 + i);
-        let right = Unique::as_ptr(&mut left).addr() + offset;
-        let right = unsafe { Unique::from_raw(std::ptr::from_exposed_addr_mut(right)) };
+        let mut node = match self.pop(i + 1) {
+            None => return None,
+            Some(n) => n,
+        };
 
-        self.levels[i].insert(left);
-        return Some(right);
+        node.bitmap = NonZeroU8::new(0xFF).unwrap();
+        self.levels[i].insert(node, i as u8);
+        return Some(self.levels[i].pop_last(i as u8).unwrap());
     }
 }
 
 #[test]
 fn test_buddy() {
-    assert_eq!(std::mem::size_of::<Node>(), 4096);
+    assert_eq!(std::mem::size_of::<Edges>(), 4096);
 
     let mut buddy = ManuallyDrop::new(Buddy::new());
     let mut allocs = Vec::new();
-    allocs.resize_with(8, Node::new);
+    allocs.resize_with(1024 * 1024, Edges::new);
 
-    for alloc in allocs.iter_mut() {
-        let uniq = unsafe { Unique::from_raw(alloc) };
-        buddy.insert(uniq, 0);
+    let mut random_allocs: Vec<&mut Edges> = allocs.iter_mut().step_by(1).collect();
+    let mut seed = 0xC0FFEE;
+    for i in 0..random_allocs.len() {
+        seed = xorshift(seed);
+        let index = seed as usize;
+        let index = index % (random_allocs.len() - i);
+        let index = i + index;
+        random_allocs.swap(i, index);
     }
 
-    let p = buddy.pop(3).unwrap();
-    buddy.insert(p, 3);
+    println!("Test set up!");
+    let now = Instant::now();
+    let n = random_allocs.len();
+    for alloc in random_allocs.into_iter() {
+        let uniq = unsafe { Unique::from_raw(alloc) };
+        let bit_index = (Unique::addr(&uniq) >> 12) & 0b111;
 
-    let mut allocs_back: Vec<usize> = (0..allocs.len())
+        let uniq =
+            Node { ptr: uniq, bitmap: NonZeroU8::new(1u8 << bit_index).unwrap() };
+        buddy.insert(uniq, 0);
+    }
+    let elapsed = now.elapsed();
+    println!(
+        "Deallocated {} allocs in {:?}, {:?} on avg",
+        n,
+        elapsed,
+        elapsed / n as u32
+    );
+
+    let now = Instant::now();
+    let mut allocs_back: Vec<usize> = (0..n)
         .into_iter()
         .map(|_| buddy.pop(0))
         .map(Option::unwrap)
         .map(ManuallyDrop::new)
-        .map(|p| Unique::addr(&p))
+        .map(|p| Unique::addr(&p.ptr))
         .collect();
+    println!("Allocated {} allocs, {:?} on avg", n, now.elapsed() / n as u32);
 
     allocs_back.sort();
-    let is_correct = allocs_back
-        .windows(2)
-        .all(|w| w[1] == w[0] + 4096);
-    assert!(is_correct, "{:?}", allocs_back);
+    let is_correct = allocs_back.windows(2).all(|w| w[1] - w[0] == 4096);
+    assert!(is_correct, "{:X?}", allocs_back);
 }

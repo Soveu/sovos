@@ -1,12 +1,13 @@
-use crate::Unique;
+use core::{fmt, mem, ptr};
+
 use arrayvec::ArrayVec;
-use core::{mem, fmt};
-use core::ptr;
+
+use crate::Unique;
 
 /// The B constant, that determines the "width" of a Node.
 /// Higher value means flatter tree, but also higher costs of operations.
 pub const B: usize = (2048 - 8) / 16;
-const TWO_B: usize = 2*B;
+const TWO_B: usize = 2 * B;
 
 /// The root of the tree, that manages `Node`s under the hood.
 #[derive(Debug)]
@@ -88,7 +89,8 @@ impl Root {
         self.0.contains(addr)
     }
 
-    /// Removes and returns the allocation in the tree, if any, that is starting on address `addr`.
+    /// Removes and returns the allocation in the tree, if any, that is starting on
+    /// address `addr`.
     ///
     /// # Examples
     ///
@@ -166,15 +168,12 @@ pub type Edge = Unique<Node>;
 #[repr(C, align(4096))]
 pub struct Node {
     right: NodeInner,
-    left: NodeInner,
+    left:  NodeInner,
 }
 
 impl Node {
     pub fn new() -> Self {
-        Self {
-            right: NodeInner::new(),
-            left: NodeInner::new(),
-        }
+        Self { right: NodeInner::new(), left: NodeInner::new() }
     }
 }
 
@@ -182,7 +181,7 @@ impl Node {
 /// All of the core methods are non-public and `Root`
 /// should be used instead.
 #[repr(align(2048))]
-struct NodeInner{
+struct NodeInner {
     edges: ArrayVec<Edge, TWO_B>,
 }
 
@@ -234,9 +233,8 @@ impl NodeInner {
             "ERROR: self.edges is NOT sorted",
         );
 
-        let are_all_right_edges_empty = self.edges
-            .iter()
-            .all(|e| e.right.edges.is_empty());
+        let are_all_right_edges_empty =
+            self.edges.iter().all(|e| e.right.edges.is_empty());
         assert!(
             self.edges[0].left.edges.is_empty() == are_all_right_edges_empty,
             "ERROR: some nodes don't have edges\n{:?}",
@@ -249,10 +247,7 @@ impl NodeInner {
         );
 
         self.edges[0].left.sanity_check();
-        self.edges
-            .iter()
-            .map(|e| &e.right)
-            .for_each(Self::sanity_check);
+        self.edges.iter().map(|e| &e.right).for_each(Self::sanity_check);
     }
 
     /// Returns if an allocation starting with `p` exists in the tree.
@@ -270,7 +265,7 @@ impl NodeInner {
             Ok(_) => return true,
             // The element is smaller than the smallest edge, so it must be on the left
             Err(0) => &self.edges[0].left,
-            Err(i) => &self.edges[i-1].right,
+            Err(i) => &self.edges[i - 1].right,
         };
 
         return node.contains(p);
@@ -300,7 +295,7 @@ impl NodeInner {
         // We can't just `self.edges.insert(index, new_edge)`,
         // because `edges` if full. So, we have to first determine
         // where the median is before insertion.
-        let median_index = if index < B { B-1 } else { B };
+        let median_index = if index < B { B - 1 } else { B };
 
         // Now, we're moving elements from edges[median_index+1..] to the median.
         // SAFETY: we are draining [index+1..] and new median is on `index`,
@@ -308,8 +303,8 @@ impl NodeInner {
         unsafe {
             let new_median: *mut Self = &mut self.edges[median_index].right;
             let new_median = &mut *new_median;
-            self.edges[median_index+1].left.edges.extend(new_median.edges.drain(..));
-            new_median.edges.extend(self.edges.drain(median_index+1..));
+            self.edges[median_index + 1].left.edges.extend(new_median.edges.drain(..));
+            new_median.edges.extend(self.edges.drain(median_index + 1..));
         }
 
         let mut new_median = self.edges.pop().unwrap();
@@ -351,7 +346,8 @@ impl NodeInner {
         }
 
         // Binary search is the faster option here, see also `Self::contains`
-        let edge = self.edges.binary_search_by_key(&Unique::addr(&new_edge), Unique::addr);
+        let edge =
+            self.edges.binary_search_by_key(&Unique::addr(&new_edge), Unique::addr);
         let insertion_index = match edge {
             Ok(_) => unreachable!("every Edge should be Unique"),
             Err(i) => i,
@@ -364,10 +360,11 @@ impl NodeInner {
             InsertionResult::Done => return InsertionResult::Done,
             InsertionResult::Overflow(e) => e,
         };
-        let overflow_element = match self.try_raw_insert(insertion_index, overflow_element) {
-            Ok(()) => return InsertionResult::Done,
-            Err(err) => err,
-        };
+        let overflow_element =
+            match self.try_raw_insert(insertion_index, overflow_element) {
+                Ok(()) => return InsertionResult::Done,
+                Err(err) => err,
+            };
 
         let median = self.insert_split(insertion_index, overflow_element);
         return InsertionResult::Overflow(median);
@@ -435,7 +432,7 @@ impl NodeInner {
             RemovalResult::Done(leaf) => RemovalResult::Done(self.replace(index, leaf)),
             RemovalResult::Underflow(leaf) => {
                 let ret = self.replace(index, leaf);
-                self.rebalance(index+1, ret)
+                self.rebalance(index + 1, ret)
             },
         };
     }
@@ -451,13 +448,10 @@ impl NodeInner {
     /// # Safety
     ///
     /// * `parent` must be a valid pointer
-    /// * `left` must be a valid pointer, that comes from either
-    ///    `parent.left` or `left_neighbour_of_parent.right`
+    /// * `left` must be a valid pointer, that comes from either `parent.left` or
+    ///   `left_neighbour_of_parent.right`
     unsafe fn _rotate_left(left: *mut Self, parent: *mut Edge) {
-        let (new_parent, rest) = (*parent).right
-            .edges
-            .split_first_mut()
-            .unwrap();
+        let (new_parent, rest) = (*parent).right.edges.split_first_mut().unwrap();
         rest[0].left.edges.extend(new_parent.right.edges.drain(..));
         // SAFETY: we won't alias or invalidate the pointer
         new_parent.right.edges.extend((*parent).right.edges.drain(1..));
@@ -467,11 +461,7 @@ impl NodeInner {
         prev_parent.right.edges.extend((*parent).left.edges.drain(..));
 
         let prev_parent_left: *mut Self = ptr::addr_of_mut!(prev_parent.left);
-        let p = if prev_parent_left == left {
-            prev_parent_left
-        } else {
-            left
-        };
+        let p = if prev_parent_left == left { prev_parent_left } else { left };
 
         // SAFETY: yes? miri complained about `left` and `prev_parent_left` aliasing,
         // but it is fixed by the if-else above
@@ -512,14 +502,14 @@ impl NodeInner {
     /// # Safety
     ///
     /// * `parent` must be a valid pointer
-    /// * `left` must be a valid pointer, that comes from either
-    ///    `parent.left` or `left_neighbour_of_parent.right`
+    /// * `left` must be a valid pointer, that comes from either `parent.left` or
+    ///   `left_neighbour_of_parent.right`
     unsafe fn _rotate_right(left: *mut Self, parent: *mut Edge) {
         let new_parent = (*left).edges.pop().unwrap();
         let mut old_parent = ptr::replace(parent, new_parent);
 
-        // This is not necessary for typical scenarios, but is needed if parent index == 0,
-        // so it has both left and right edge
+        // This is not necessary for typical scenarios, but is needed if parent index ==
+        // 0, so it has both left and right edge
         (*parent).left.edges.extend(old_parent.left.edges.drain(..));
 
         old_parent.left.edges.extend((*parent).right.edges.drain(..));
@@ -559,7 +549,9 @@ impl NodeInner {
     fn rebalance(&mut self, index: usize, to_return: Edge) -> RemovalResult {
         debug_assert!(
             index <= self.edges.len(),
-            "index={} > len={}", index, self.edges.len()
+            "index={} > len={}",
+            index,
+            self.edges.len()
         );
 
         if self.try_rotate_left(index) {
@@ -596,7 +588,7 @@ impl NodeInner {
         };
         let node = match index {
             0 => &mut self.edges[0].left,
-            i => &mut self.edges[i-1].right,
+            i => &mut self.edges[i - 1].right,
         };
 
         return match node.find_and_remove(p) {
@@ -638,12 +630,8 @@ impl fmt::Debug for NodeInner {
             return Ok(());
         }
 
-        let iter = self.edges
-            .iter()
-            .map(|p| &p.right as *const Self);
-        let _ = f.debug_list()
-            .entries(iter)
-            .finish()?;
+        let iter = self.edges.iter().map(|p| &p.right as *const Self);
+        let _ = f.debug_list().entries(iter).finish()?;
 
         let _ = self.edges[0].left.fmt(f)?;
         for edge in self.edges.iter() {
