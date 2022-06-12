@@ -176,6 +176,7 @@ pub struct BltPixel {
 /// intensity. The color intensities must increase as the color values for a
 /// each color mask increase with a minimum intensity of all bits in a color
 /// mask clear to a maximum intensity of all bits in a color mask set.
+#[derive(Debug)]
 #[repr(C)]
 pub struct PixelBitmask {
     pub red:      u32,
@@ -210,6 +211,7 @@ pub enum PixelFormat {
     BltOnly,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct ModeInformation {
     /// The version of this data structure. A value of zero represents the
@@ -251,6 +253,7 @@ pub struct ModeInformation {
     pub pixels_per_scanline: u32,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Mode {
     /// The number of modes supported by QueryMode() and SetMode().
@@ -260,7 +263,7 @@ pub struct Mode {
     pub mode: u32,
 
     /// Pointer to read-only EFI_GRAPHICS_OUTPUT_MODE_INFORMATION data.
-    pub info: *const ModeInformation,
+    pub info: Option<&'static ModeInformation>,
 
     /// Size of Info structure in bytes. Future versions of this specification may
     /// increase the size of the EFI_GRAPHICS_OUTPUT_MODE_INFORMATION data.

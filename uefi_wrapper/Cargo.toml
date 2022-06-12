@@ -7,10 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uart_16550 = "*"
-
 cpu = { version = "*", path = "../libs/cpu" , features = ["ringzero"] }
 bootinfo = { version = "*", path = "../libs/bootinfo" }
 elf = { version = "*", path = "../libs/elf" }
 uefi = { version = "*", path = "../libs/uefi" }
 cereal = { version = "*", path = "../libs/cereal" }
+fb = { version = "*", path = "../libs/fb" }

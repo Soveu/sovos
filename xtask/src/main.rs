@@ -66,7 +66,9 @@ fn build_run_directory(current_dir: PathBuf) -> Return {
     let mut image = current_dir;
     image.push("uefi_wrapper/target/x86_64-unknown-uefi/release/uefi_wrapper.efi");
     
-    // TODO: why do QEMU/OVMF overwrite the binary?
+    // When the file is a symlink, for some reason QEMU corrupts the data
+    // inside it, so use a copy instead.
+    // https://gitlab.com/qemu-project/qemu/-/issues/1074
     brint!("Copying {} to {}\n", image.display(), boot.display());
     std::fs::copy(&image, &boot)?;
 
@@ -84,9 +86,9 @@ fn run(current_dir: PathBuf) -> Return {
         "-enable-kvm",
         "-cpu", "host",
         "-m", "8G",
-        "-nographic",
         "-d", "int,cpu_reset,guest_errors",
         "-no-reboot",
+        //"-nographic",
         //"-s", "-S",
     ];
     let mut qemu = Command::new("qemu-system-x86_64");

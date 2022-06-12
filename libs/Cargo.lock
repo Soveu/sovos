@@ -45,6 +45,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "fb"
+version = "0.1.0"
+
+[[package]]
 name = "freetree"
 version = "0.1.0"
 dependencies = [

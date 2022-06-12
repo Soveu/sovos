@@ -9,6 +9,7 @@ members = [
   "smbios",
   "freetree",
   "cereal",
+  "fb",
 ]
 
 [profile.release]

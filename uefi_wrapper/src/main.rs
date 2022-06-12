@@ -10,13 +10,11 @@
 #![feature(slice_ptr_len)]
 #![feature(naked_functions)]
 
-use uart_16550::SerialPort;
-
 use elf::{Elf, self};
 use cpu::{self, acpi};
 use uefi::{self, Verify};
 use bootinfo::Bootinfo;
-use cereal;
+use fb;
 
 use core::fmt::Write;
 //use core::ptr;
@@ -24,6 +22,7 @@ use core::mem::MaybeUninit;
 
 static KERNEL: &[u8] = include_bytes!(env!("SOVOS_KERNEL_PATH"));
 static mut BOOTINFO: Bootinfo = Bootinfo::new();
+//static mut FRAMEBUFFER: Option<fb::Framebuffer> = None;
 
 macro_rules! brint {
     ($($arg:tt)*) => {{
@@ -33,17 +32,6 @@ macro_rules! brint {
 
 #[panic_handler]
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
-    let mut out = unsafe { SerialPort::new(0x3F8) };
-
-    brint!(out, "\n\n!!! PANIK !!!\n");
-    if let Some(location) = info.location() {
-        brint!(out, "file: {:?}, line: {}\n", location.file(), location.line());
-    }
-    if let Some(msg) = info.message() {
-        let _ = out.write_fmt(*msg);
-        let _ = out.write_char('\n');
-    }
-
     loop {
         cpu::halt();
     }
@@ -54,16 +42,35 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     cpu::disable_interrupts();
 
     let st = unsafe { &mut *st };
-    let bootinfo = unsafe { &mut BOOTINFO };
     static mut BUF: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
 
-    assert_eq!(st.verify(), Ok(()));
+    //assert_eq!(st.verify(), Ok(()));
 
+    let bootinfo = unsafe { &mut BOOTINFO };
     let boot_services = unsafe { st.boot_services.unwrap().as_ref() };
     //assert_eq!(boot_services.verify(), Ok(()));
 
-    let out = unsafe { st.con_out.unwrap().as_mut() };
-    assert_eq!(out.print_utf8("TEST\n👍\n"), Ok(()));
+    let gop = boot_services.locate_protocol(uefi::Guid::EFI_GRAPHICS_OUTPUT_PROTOCOL);
+    let gop = match gop {
+        Ok(Some(x)) => x,
+        _ => {
+            unsafe { st.con_out.unwrap().as_mut().write_str("couldn't locate GOP") };
+            panic!();
+        },
+    };
+    let gop = gop.cast::<uefi::protocols::gop::GraphicsOutput>();
+    let gop_mode = unsafe { &*gop.as_ref().mode };
+    let gop_info = gop_mode.info.unwrap();
+    
+    let mut out = fb::Framebuffer {
+        base: gop_mode.framebuffer_base as *mut u8,
+        scanline_width: gop_info.pixels_per_scanline as usize,
+        max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
+        max_y: (gop_info.vertical_res as usize / fb::FONT_Y) as u16,
+        cursor_x: 0,
+        cursor_y: 0,
+        mode: fb::Mode::Overwrite,
+    };
 
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);
@@ -74,7 +81,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
             let rsdp: *const acpi::Rsdp = cfg.table as *const _;
             unsafe {
                 let rsdp = &*rsdp;
-                assert!(rsdp.verify_checksum());
+                //assert!(rsdp.verify_checksum());
 
                 let xsdt: &acpi::Xsdt = acpi::Xsdt::from_raw(rsdp.xsdt);
                 let sdt_iter = xsdt.other_sdts
@@ -119,16 +126,14 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     }
     brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
 
-    prepare_kernel_elf(out);
+    //prepare_kernel_elf(&mut out);
 
     let cr4 = cpu::Cr4::get();
     let cr0 = cpu::Cr0::get();
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
 
-    unsafe {
-        brint!(out, "{:?}\n", cereal::identify_uart(0x3F8));
-    }
+    loop { cpu::halt(); }
 
     use cpu::segmentation::GDTR;
     let gdtr = GDTR::new(&bootinfo.gdt);
@@ -137,8 +142,6 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
 
     use cpu::interrupt;
     extern "sysv64" fn _dummy_handler(ii: &mut interrupt::Stack) {
-        let mut out = unsafe { SerialPort::new(0x3F8) };
-        brint!(out, "\nHANDLER\n\n{:?}\n", ii);
         loop { cpu::halt() };
     }
     let dummy_handler = interrupt::make_handler!(_dummy_handler);
@@ -158,7 +161,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     todo!("Actually load the ELF");
 }
 
-fn prepare_kernel_elf(out: &mut uefi::protocols::simple_text::Output) {
+fn prepare_kernel_elf(out: &mut impl core::fmt::Write) {
     let kernel = KERNEL;
     brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
 
