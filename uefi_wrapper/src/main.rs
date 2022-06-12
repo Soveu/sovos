@@ -158,7 +158,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     todo!("Actually load the ELF");
 }
 
-fn prepare_kernel_elf(out: &mut uefi::SimpleTextOutput) {
+fn prepare_kernel_elf(out: &mut uefi::protocols::simple_text::Output) {
     let kernel = KERNEL;
     brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
 

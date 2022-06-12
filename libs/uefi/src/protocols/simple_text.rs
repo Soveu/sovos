@@ -7,7 +7,7 @@ macro_rules! uefi_fn_ptr {
 }
 
 #[repr(C)]
-pub struct SimpleTextOutputMode {
+pub struct OutputMode {
     pub max_mode:       i32,
     pub mode:           i32,
     pub attribute:      i32,
@@ -17,7 +17,7 @@ pub struct SimpleTextOutputMode {
 }
 
 #[repr(C)]
-pub struct SimpleTextOutput {
+pub struct Output {
     /// ## Parameters
     ///
     /// * This - A pointer to the `SimpleTextOutputProtocol` instance.
@@ -85,7 +85,7 @@ pub struct SimpleTextOutput {
     pub set_cursor_position: usize,
     pub enable_cursor:       usize,
 
-    pub mode: *const SimpleTextOutputMode,
+    pub mode: *const OutputMode,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -103,16 +103,16 @@ impl Verification {
     }
 }
 
-impl SimpleTextOutput {
+impl Output {
     pub fn reset(&mut self, ver: Verification) -> Result<(), Error> {
-        let f = self.reset.expect("buggy UEFI: SimpleTextOutput::reset is null");
+        let f = self.reset.expect("buggy UEFI: simple_text::Output::reset is null");
         let result = unsafe { (f)(self, ver.to_bool()) };
         return result.ok_or_expect_errors(&[Error::DeviceError]);
     }
 
     unsafe fn test_raw_utf16(&self, s: *const u16) -> Result<(), Error> {
         let f =
-            self.test_string.expect("buggy UEFI: SimpleTextOutput::test_string is null");
+            self.test_string.expect("buggy UEFI: simple_text::Output::test_string is null");
         let result = (f)(self, s);
         return result.ok_or_expect_errors(&[Error::Unsupported]);
     }
@@ -120,7 +120,7 @@ impl SimpleTextOutput {
     unsafe fn print_raw_utf16(&mut self, s: *const u16) -> Result<(), Error> {
         let f = self
             .output_string
-            .expect("buggy UEFI: SimpleTextOutput::output_string is null");
+            .expect("buggy UEFI: simple_text::Output::output_string is null");
         let result = (f)(self, s);
         return result.ok_or_expect_errors(&[Error::Unsupported, Error::DeviceError]);
     }
@@ -159,7 +159,7 @@ impl SimpleTextOutput {
     }
 }
 
-impl fmt::Write for SimpleTextOutput {
+impl fmt::Write for Output {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         match self.print_utf8(s) {
             Ok(()) => Ok(()),

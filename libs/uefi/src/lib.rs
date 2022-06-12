@@ -6,18 +6,16 @@ use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 use core::num::NonZeroUsize;
 
-pub mod gop;
 pub mod memory;
+pub mod protocols;
 
 mod boot_services;
 mod guid;
 mod header;
-mod protocols;
 mod runtime_services;
 mod status;
 mod system_table;
 
-pub use protocols::*;
 pub use boot_services::*;
 pub use guid::*;
 pub use header::*;

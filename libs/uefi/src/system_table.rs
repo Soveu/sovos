@@ -29,14 +29,14 @@ pub struct SystemTable {
     pub con_in:            usize,
 
     pub console_out_handle: Handle,
-    pub con_out:            Option<NonNull<protocols::SimpleTextOutput>>,
+    pub con_out:            Option<NonNull<protocols::simple_text::Output>>,
 
     /// The handle for the active standard error console device. This handle
     /// must support the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
     pub console_err_handle: Handle,
     /// A pointer to the EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL interface that is
     /// associated with StandardErrorHandle.
-    pub con_err:            Option<NonNull<protocols::SimpleTextOutput>>,
+    pub con_err:            Option<NonNull<protocols::simple_text::Output>>,
 
     /// A pointer to the EFI Runtime Services Table. See Section 4.5.
     pub runtime_services: *const RuntimeServices,
