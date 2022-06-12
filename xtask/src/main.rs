@@ -66,13 +66,9 @@ fn build_run_directory(current_dir: PathBuf) -> Return {
     let mut image = current_dir;
     image.push("uefi_wrapper/target/x86_64-unknown-uefi/release/uefi_wrapper.efi");
     
-    if fs::metadata(&boot).is_err() {
-        use std::os::unix::fs::symlink;
-        brint!("Symlinking {} to {}\n", image.display(), boot.display());
-        symlink(&image, &boot)?;
-    } else {
-        brint!("Symlink exists, skipping ({})\n", boot.display());
-    }
+    // TODO: why do QEMU/OVMF overwrite the binary?
+    brint!("Copying {} to {}\n", image.display(), boot.display());
+    std::fs::copy(&image, &boot)?;
 
     Ok(())
 }
@@ -83,7 +79,7 @@ fn run(current_dir: PathBuf) -> Return {
 
     brint!("Running QEMU (execve)\n");
     let qemu_args = [
-        "-drive", "if=pflash,format=raw,read-only,file=/usr/share/edk2/ovmf/OVMF_CODE.fd",
+        "-drive", "if=pflash,format=raw,read-only=on,file=/usr/share/edk2/ovmf/OVMF_CODE.fd",
         "-drive", "format=raw,file=fat:rw:fat/",
         "-enable-kvm",
         "-cpu", "host",
