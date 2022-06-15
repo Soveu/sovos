@@ -9,7 +9,7 @@ pub struct GraphicsOutput {
     /// valid modes are read-only values in the Mode structure of the
     /// EFI_GRAPHICS_OUTPUT_PROTOCOL.
     /// * SizeOfInfo - A pointer to the size, in bytes, of the Info buffer.
-    /// Info A pointer to a callee allocated buffer that returns information about
+    /// * Info - A pointer to a callee allocated buffer that returns information about
     /// ModeNumber.
     ///
     /// ## Description
@@ -33,12 +33,12 @@ pub struct GraphicsOutput {
     /// EFI_SUCCESS Valid mode information was returned.
     /// EFI_DEVICE_ERROR A hardware error occurred trying to retrieve the video mode.
     /// EFI_INVALID_PARAMETER ModeNumber is not valid.
-    pub query_mode: Option<
+    query_mode: Option<
         extern "efiapi" fn(
             this: &Self,
             mode_number: u32,
             size_of_info: &mut usize,
-            &mut *const ModeInformation,
+            info: &mut *const ModeInformation,
         ) -> RawStatus,
     >,
 
@@ -62,7 +62,7 @@ pub struct GraphicsOutput {
     /// EFI_SUCCESS The graphics mode specified by ModeNumber was selected.
     /// EFI_DEVICE_ERROR The device had an error and could not complete the request.
     /// EFI_UNSUPPORTED ModeNumber is not supported by this device
-    pub set_mode:
+    set_mode:
         Option<unsafe extern "efiapi" fn(this: &mut Self, mode_number: u32) -> RawStatus>,
 
     /// ## Parameters
@@ -151,6 +151,31 @@ pub struct GraphicsOutput {
     /// Pointer to EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE data. Type
     /// EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE is defined in “Related Definitions” below.
     pub mode: *const Mode,
+}
+
+impl GraphicsOutput {
+    pub fn query_mode(&self, mode_number: u32) -> Result<&ModeInformation, Error> {
+        const ERRORS: &[Error] = &[Error::DeviceError, Error::InvalidParameter];
+
+        let mut sz = 0usize;
+        let mut p: *const ModeInformation = core::ptr::null();
+        let f = self.query_mode.expect("buggy UEFI: query_mode is null");
+        let result = (f)(self, mode_number, &mut sz, &mut p);
+
+        assert!(core::mem::size_of::<ModeInformation>() <= sz);
+
+        return match result.ok_or_expect_errors(ERRORS) {
+            Ok(()) => Ok(unsafe { p.as_ref().expect("query_mode: pointer is null") }),
+            Err(e) => Err(e),
+        };
+    }
+
+    pub fn set_mode(&mut self, mode_number: u32) -> Result<(), Error> {
+        const ERRORS: &[Error] = &[Error::DeviceError, Error::Unsupported];
+        let f = self.set_mode.expect("buggy UEFI: set_mode is null");
+        let result = unsafe { (f)(self, mode_number) };
+        return result.ok_or_expect_errors(ERRORS);
+    }
 }
 
 #[repr(C)]

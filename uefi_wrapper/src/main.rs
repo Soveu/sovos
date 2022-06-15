@@ -58,8 +58,9 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
             panic!();
         },
     };
-    let gop = gop.cast::<uefi::protocols::gop::GraphicsOutput>();
-    let gop_mode = unsafe { &*gop.as_ref().mode };
+    let mut gop = gop.cast::<uefi::protocols::gop::GraphicsOutput>();
+    let gop = unsafe { gop.as_mut() };
+    let gop_mode = unsafe { &*gop.mode };
     let gop_info = gop_mode.info.unwrap();
     
     let mut out = fb::Framebuffer {
@@ -73,6 +74,33 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     };
     out.cursor_y = out.max_y - 1;
 
+    brint!(out, "Current mode = {}\n", gop_mode.mode);
+    let (mode_index, new_mode) = (0..gop_mode.max_mode)
+        .map(|i| (i, gop.query_mode(i).unwrap()))
+        .max_by_key(|(_, m)| m.horizontal_res * m.vertical_res)
+        .unwrap();
+
+    brint!(out, "Switching mode to {}x{}\n", new_mode.horizontal_res, new_mode.vertical_res);
+    gop.set_mode(mode_index).unwrap();
+    let gop_mode = unsafe { &*gop.mode };
+    let gop_info = gop_mode.info.unwrap();
+
+    out = fb::Framebuffer {
+        base: gop_mode.framebuffer_base as *mut u8,
+        scanline_width: gop_info.pixels_per_scanline as usize,
+        max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
+        max_y: (gop_info.vertical_res as usize / fb::FONT_Y) as u16,
+        cursor_x: 0,
+        cursor_y: 0,
+        mode: fb::Mode::Scroll,
+    };
+    out.cursor_y = out.max_y - 1;
+
+    brint!(out, "Finished switching!\n");
+
+    loop { cpu::halt(); }
+
+    /*
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);
 
@@ -134,8 +162,6 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
 
-    loop { cpu::halt(); }
-
     use cpu::segmentation::GDTR;
     let gdtr = GDTR::new(&bootinfo.gdt);
     unsafe { gdtr.apply(); }
@@ -160,8 +186,10 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     assert_eq!(ok, Ok(()));
 
     todo!("Actually load the ELF");
+    */
 }
 
+/*
 fn prepare_kernel_elf(out: &mut impl core::fmt::Write) {
     let kernel = KERNEL;
     brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
@@ -181,3 +209,4 @@ fn prepare_kernel_elf(out: &mut impl core::fmt::Write) {
     brint!(out, "Program headers: {:#?}\n", pheaders);
     brint!(out, "Section headers: {:#?}\n", sheaders);
 }
+*/
