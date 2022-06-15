@@ -34,7 +34,6 @@ fn build(mut current_dir: PathBuf) -> Return {
 
     brint!("Cargo finished with {}\n", status);
     assert!(status.success());
-
     assert!(current_dir.pop());
 
     let mut kernel_path = current_dir.clone();
@@ -52,7 +51,7 @@ fn build(mut current_dir: PathBuf) -> Return {
     assert!(status.success());
     assert!(current_dir.pop());
 
-    Ok(())
+    return build_run_directory(current_dir);
 }
 
 fn build_run_directory(current_dir: PathBuf) -> Return {
@@ -77,7 +76,6 @@ fn build_run_directory(current_dir: PathBuf) -> Return {
 
 fn run(current_dir: PathBuf) -> Return {
     build(current_dir.clone())?;
-    build_run_directory(current_dir.clone())?;
 
     brint!("Running QEMU (execve)\n");
     let qemu_args = [
