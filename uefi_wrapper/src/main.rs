@@ -69,8 +69,9 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
         max_y: (gop_info.vertical_res as usize / fb::FONT_Y) as u16,
         cursor_x: 0,
         cursor_y: 0,
-        mode: fb::Mode::Overwrite,
+        mode: fb::Mode::Scroll,
     };
+    out.cursor_y = out.max_y - 1;
 
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);
