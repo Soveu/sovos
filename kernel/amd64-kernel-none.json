@@ -41,7 +41,7 @@
   "code-model": "small",
   "dynamic-linking": false,
   "function-sections": false,
-  "split-debuginfo": "packed",
+  "split-debuginfo": "off",
   "eh-frame-header": false,
   "requires-uwtable": false,
   "default-uwtable": false,
@@ -60,7 +60,7 @@
   "late-link-args-static": {},
 
   "pre-link-args": {
-    "ld.lld": [
+    "ld": [
       "--image-base=0",
       "--defsym=__KERNEL_BASE=0",
       "--entry=_start",
@@ -86,7 +86,7 @@
       "-zrelro",
       "-znoexecstack"
     ],
-    "ld": [
+    "msvc": [
       "--orphan-handling=error",
       "--build-id=fast",
       "-zshstk",

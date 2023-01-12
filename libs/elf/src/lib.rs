@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(arbitrary_enum_discriminant)]
 
 mod definitions;
 use core::mem;

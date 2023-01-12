@@ -3,7 +3,6 @@
 
 #![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
-#![feature(asm_sym)]
 #![feature(array_chunks)]
 #![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
