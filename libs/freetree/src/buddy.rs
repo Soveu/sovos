@@ -11,6 +11,39 @@ const MAX_NODES: usize =
     (MAX_EDGE_SIZE - mem::size_of::<usize>()) / mem::size_of::<Node>();
 const B: usize = MAX_NODES / 2;
 const TWO_B: usize = 2 * B;
+const LEVELS: usize = 12;
+
+pub struct Buddy {
+    levels: [Unique<BuddyLevel>; LEVELS],
+}
+
+impl Buddy {
+    pub fn new(levels: [Unique<BuddyLevel>; LEVELS]) -> Self {
+        Self { levels }
+    }
+
+    pub fn insert(&mut self, node: Node, level: usize) {
+        match self.levels[level].insert(node, level as u8) {
+            Some(big) => self.insert(big, level + 1),
+            None => (),
+        }
+    }
+
+    pub fn pop(&mut self, level: usize) -> Option<Node> {
+        if let Some(n) = self.levels[level].pop_last(level as u8) {
+            return Some(n);
+        }
+
+        let mut node = match self.pop(level + 1) {
+            None => return None,
+            Some(n) => n,
+        };
+
+        node.bitmap = NonZeroU8::new(0xFF).unwrap();
+        self.levels[level].insert(node, level as u8);
+        return Some(self.levels[level].pop_last(level as u8).unwrap());
+    }
+}
 
 #[derive(Debug)]
 pub struct BuddyLevel(Edge);

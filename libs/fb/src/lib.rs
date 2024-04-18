@@ -1,5 +1,6 @@
 #![no_std]
-#![feature(core_intrinsics)]
+#![allow(internal_features)]
+#![feature(core_intrinsics)] // volatile_set_memory
 
 use core::fmt;
 

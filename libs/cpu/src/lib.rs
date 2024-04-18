@@ -5,10 +5,11 @@
 #![feature(const_mut_refs)]
 #![feature(decl_macro)]
 #![feature(naked_functions)]
-#![feature(rustc_attrs)]
-#![feature(slice_ptr_len)]
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
+
+#![allow(internal_features)]
+#![feature(rustc_attrs)] // for rustc_layout_scalar_valid_range_end
 
 use impl_bits::impl_bits;
 

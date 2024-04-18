@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(abi_efiapi)]
 #![feature(maybe_uninit_slice)]
 
 use core::mem::MaybeUninit;

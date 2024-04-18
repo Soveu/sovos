@@ -1,4 +1,4 @@
-use crate::{inb, outb, FCR_OFFSET};
+use crate::{outb, FCR_OFFSET};
 
 #[derive(Clone, Copy)]
 pub enum IntTriggerLevel {

@@ -84,7 +84,7 @@ fn run(current_dir: PathBuf) -> Return {
         "-enable-kvm",
         "-cpu", "host",
         "-m", "8G",
-        "-d", "int,cpu_reset,guest_errors",
+        //"-d", "int,cpu_reset,guest_errors",
         "-no-reboot",
         //"-nographic",
         //"-s", "-S",

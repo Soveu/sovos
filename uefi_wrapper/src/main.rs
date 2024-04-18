@@ -1,12 +1,10 @@
 #![no_std]
 #![no_main]
 
-#![feature(abi_efiapi)]
 #![feature(abi_x86_interrupt)]
 #![feature(array_chunks)]
 #![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
-#![feature(slice_ptr_len)]
 #![feature(naked_functions)]
 
 use elf::{Elf, self};
@@ -30,7 +28,7 @@ macro_rules! brint {
 }
 
 #[panic_handler]
-fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
     loop {
         cpu::halt();
     }
@@ -79,6 +77,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
         .max_by_key(|(_, m)| m.horizontal_res * m.vertical_res)
         .unwrap();
 
+    let (x, y) = (new_mode.horizontal_res, new_mode.vertical_res);
     brint!(out, "Switching mode to {}x{}\n", new_mode.horizontal_res, new_mode.vertical_res);
     gop.set_mode(mode_index).unwrap();
     let gop_mode = unsafe { &*gop.mode };
@@ -95,11 +94,8 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     };
     out.cursor_y = out.max_y - 1;
 
-    brint!(out, "Finished switching!\n");
+    brint!(out, "Finished switching to {}x{}\n", x, y);
 
-    loop { cpu::halt(); }
-
-    /*
     for cfg in st.config_slice() {
         brint!(out, "{:?}\n", cfg);
 
@@ -161,13 +157,18 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     brint!(out, "CR4: {:?}\n", cr4);
     brint!(out, "CR0: {:?}\n", cr0);
 
+    let (memkey, _) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
+    let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
+    assert_eq!(ok, Ok(()));
+    brint!(out, "Exit boot services\n");
+
     use cpu::segmentation::GDTR;
     let gdtr = GDTR::new(&bootinfo.gdt);
     unsafe { gdtr.apply(); }
     brint!(out, "GDT applied\n");
 
     use cpu::interrupt;
-    extern "sysv64" fn _dummy_handler(ii: &mut interrupt::Stack) {
+    extern "sysv64" fn _dummy_handler(_ii: &mut interrupt::Stack) {
         loop { cpu::halt() };
     }
     let dummy_handler = interrupt::make_handler!(_dummy_handler);
@@ -180,12 +181,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     unsafe { idtr.apply(); }
     brint!(out, "IDT applied\n");
 
-    let (memkey, _) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
-    let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
-    assert_eq!(ok, Ok(()));
-
     todo!("Actually load the ELF");
-    */
 }
 
 /*

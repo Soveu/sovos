@@ -63,7 +63,7 @@ extern "sysv64" fn kmain() -> ! {
     unsafe {
         asm!("xchg rax, rax", in("rax") &STR, options(nostack, nomem));
         MUT[0] = b'b';
-        asm!("xchg rax, rax", in("rax") &MUT, options(nostack, nomem));
+        asm!("xchg rax, rax", in("rax") core::ptr::addr_of!(MUT), options(nostack, nomem));
     }
 
     loop {
