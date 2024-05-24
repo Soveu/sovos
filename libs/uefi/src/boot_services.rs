@@ -7,7 +7,13 @@ pub struct BootServices {
     pub raise_tpl:   usize,
     pub restore_tpl: usize,
 
-    pub allocate_pages: usize,
+    pub allocate_pages: extern "efiapi" fn(
+            usize,
+            memory::Type,
+            u32,
+            *mut *mut u8,
+        ) -> RawStatus,
+
     pub free_pages:     usize,
 
     /// Parameters
@@ -203,7 +209,7 @@ pub struct BootServices {
 impl BootServices {
     pub fn get_memory_map<'buf>(
         &self,
-        buf: &'buf mut [MaybeUninit<u64>],
+        buf: &'buf mut [u64],
     ) -> Result<(memory::MapKey, memory::DescriptorIterator<'buf>), Error> {
         let mut size: usize = core::mem::size_of_val(buf);
         let mut key = memory::MapKey(0xDEAD_BEEF);
@@ -228,8 +234,8 @@ impl BootServices {
         let init_size = size / core::mem::size_of::<u64>();
         let init_buffer = &mut buf[..init_size];
 
-        /* SAFETY: UEFI promised to initialize that piece of memory */
-        let init_buffer = unsafe { MaybeUninit::slice_assume_init_ref(init_buffer) };
+        // /* SAFETY: UEFI promised to initialize that piece of memory */
+        // let init_buffer = unsafe { MaybeUninit::slice_assume_init_ref(init_buffer) };
 
         let iter = memory::DescriptorIterator::new(init_buffer, descriptor_size);
         return Ok((key, iter));

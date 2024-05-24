@@ -7,6 +7,11 @@ use core::fmt;
 pub const FONT_X: usize = 9;
 pub const FONT_Y: usize = 16;
 const COLORS_BYTES: usize = 4;
+
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+struct Rgba([u8; COLORS_BYTES]);
+
 const FONT: [u8; FONT_X * FONT_Y * 256 * COLORS_BYTES] = *include_bytes!("../font.raw");
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -50,24 +55,18 @@ impl Framebuffer {
         let y = self.cursor_y as usize;
         let font_x = (b % 16) as usize;
         let font_y = (b / 16) as usize;
-        let p = self.base;
 
         for fy in 0..FONT_Y {
             for fx in 0..FONT_X {
+                let fb_coord = (y * FONT_Y + fy) * self.scanline_width + fx + x * FONT_X;
+                let font_pixel_x = font_x * FONT_X + fx;
+                let font_pixel_y = font_y * FONT_Y + fy;
+                let font_pixel = font_pixel_y * 16 * FONT_X + font_pixel_x;
+
                 unsafe {
-                    let fb_coord =
-                        (y * FONT_Y + fy) * self.scanline_width + fx + x * FONT_X;
-                    let font_pixel_x = font_x * FONT_X + fx;
-                    let font_pixel_y = font_y * FONT_Y + fy;
-                    let font_pixel = font_pixel_y * 16 * FONT_X + font_pixel_x;
-                    p.add(COLORS_BYTES * fb_coord + 0)
-                        .write_volatile(FONT[COLORS_BYTES * font_pixel + 0]);
-                    p.add(COLORS_BYTES * fb_coord + 1)
-                        .write_volatile(FONT[COLORS_BYTES * font_pixel + 1]);
-                    p.add(COLORS_BYTES * fb_coord + 2)
-                        .write_volatile(FONT[COLORS_BYTES * font_pixel + 2]);
-                    p.add(COLORS_BYTES * fb_coord + 3)
-                        .write_volatile(FONT[COLORS_BYTES * font_pixel + 3]);
+                    let fb_ptr = self.base.cast::<Rgba>().add(fb_coord);
+                    let font_ptr = FONT.as_ptr().cast::<Rgba>().add(font_pixel);
+                    core::ptr::write_volatile(fb_ptr, *font_ptr);
                 }
             }
         }
@@ -113,7 +112,7 @@ impl Framebuffer {
         let len: usize = one_text_line * (self.max_y as usize - 1);
         let last_line_ptr = unsafe { self.base.add(len) };
         unsafe {
-            core::intrinsics::volatile_copy_memory(dst, src, len);
+            core::intrinsics::volatile_copy_nonoverlapping_memory(dst, src, len);
             core::intrinsics::volatile_set_memory(last_line_ptr, 0u8, one_text_line);
         }
     }

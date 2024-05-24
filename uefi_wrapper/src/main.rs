@@ -1,25 +1,15 @@
 #![no_std]
 #![no_main]
 
-#![feature(abi_x86_interrupt)]
-#![feature(array_chunks)]
-#![feature(const_maybe_uninit_assume_init)]
 #![feature(panic_info_message)]
-#![feature(naked_functions)]
 
-use elf::{Elf, self};
-use cpu::{self, acpi};
-use uefi::{self, Verify};
-use bootinfo::Bootinfo;
+use uefi;
 use fb;
-
+use bootinfo::*;
+use core::sync::atomic::{Ordering, AtomicPtr};
 use core::fmt::Write;
-//use core::ptr;
-use core::mem::MaybeUninit;
 
-static KERNEL: &[u8] = include_bytes!(env!("SOVOS_KERNEL_PATH"));
-static mut BOOTINFO: Bootinfo = Bootinfo::new();
-//static mut FRAMEBUFFER: Option<fb::Framebuffer> = None;
+static STUFF_PTR: AtomicPtr<Bootinfo> = AtomicPtr::new(core::ptr::null_mut());
 
 macro_rules! brint {
     ($($arg:tt)*) => {{
@@ -28,39 +18,37 @@ macro_rules! brint {
 }
 
 #[panic_handler]
-fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
+fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    let ptr = STUFF_PTR.load(Ordering::SeqCst);
+    let fb = unsafe { &mut *core::ptr::addr_of_mut!((*ptr).fb) };
+
+    if let Some(loc) = info.location() {
+        let _ = write!(fb, "Panic at {}:{}\n", loc.file(), loc.line());
+    } else {
+        let _ = fb.write_str("Panic at unknown location\n");
+    }
+
+    if let Some(msg) = info.message() {
+        let _ = fb.write_fmt(*msg);
+    }
+
     loop {
         cpu::halt();
     }
 }
 
-#[no_mangle]
-extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
-    cpu::disable_interrupts();
-
-    let st = unsafe { &mut *st };
-    static mut BUF: [MaybeUninit<u64>; 1024] = unsafe { MaybeUninit::uninit().assume_init() };
-
-    //assert_eq!(st.verify(), Ok(()));
-
-    let bootinfo = unsafe { &mut BOOTINFO };
-    let boot_services = unsafe { st.boot_services.unwrap().as_ref() };
-    //assert_eq!(boot_services.verify(), Ok(()));
-
+fn setup_framebuffer(boot_services: &uefi::BootServices, bootinfo: &mut Bootinfo) -> uefi::RawStatus {
     let gop = boot_services.locate_protocol(uefi::Guid::EFI_GRAPHICS_OUTPUT_PROTOCOL);
     let gop = match gop {
-        Ok(Some(x)) => x,
-        _ => {
-            unsafe { st.con_out.unwrap().as_mut().write_str("couldn't locate GOP") };
-            panic!();
-        },
+        Ok(Some(x)) => unsafe { x.cast::<uefi::protocols::gop::GraphicsOutput>().as_mut() },
+        _ => return uefi::RawStatus::from_error(uefi::Error::CompromisedData),
     };
-    let mut gop = gop.cast::<uefi::protocols::gop::GraphicsOutput>();
-    let gop = unsafe { gop.as_mut() };
+
     let gop_mode = unsafe { &*gop.mode };
     let gop_info = gop_mode.info.unwrap();
     
-    let mut out = fb::Framebuffer {
+    let out = &mut bootinfo.fb;
+    *out = fb::Framebuffer {
         base: gop_mode.framebuffer_base as *mut u8,
         scanline_width: gop_info.pixels_per_scanline as usize,
         max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
@@ -83,7 +71,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     let gop_mode = unsafe { &*gop.mode };
     let gop_info = gop_mode.info.unwrap();
 
-    out = fb::Framebuffer {
+    *out = fb::Framebuffer {
         base: gop_mode.framebuffer_base as *mut u8,
         scanline_width: gop_info.pixels_per_scanline as usize,
         max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
@@ -95,113 +83,91 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     out.cursor_y = out.max_y - 1;
 
     brint!(out, "Finished switching to {}x{}\n", x, y);
+    // for i in (0..gop_mode.max_mode) {
+    //     brint!(out, "{}: {:?}\n", i, gop.query_mode(i).unwrap());
+    // }
 
-    for cfg in st.config_slice() {
-        brint!(out, "{:?}\n", cfg);
+    return uefi::RawStatus::ok();
+}
 
-        use uefi::Guid;
+fn allocate_pages(boot_services: &uefi::BootServices, pages: u32) -> (*mut u8, uefi::RawStatus) {
+    const ALLOCATE_ANY_PAGES: usize = 0;
+    let mut memory: *mut u8 = core::ptr::null_mut();
+    let result = (boot_services.allocate_pages)(
+        ALLOCATE_ANY_PAGES,
+        uefi::memory::Type::LoaderData,
+        pages,
+        &mut memory,
+    );
+    return (memory, result);
+}
 
-        if cfg.guid == Guid::EFI_ACPI_20_TABLE {
-            let rsdp: *const acpi::Rsdp = cfg.table as *const _;
-            unsafe {
-                let rsdp = &*rsdp;
-                //assert!(rsdp.verify_checksum());
+fn base_setup(boot_services: &uefi::BootServices) -> Result<&'static mut Bootinfo, uefi::RawStatus> {
+    // First, we need to allocate some memory for global state (framebuffer, memory information..)
+    let pages = core::mem::size_of::<Bootinfo>() / 4096;
+    let (bootinfo_ptr, result) = allocate_pages(boot_services, pages as u32);
 
-                let xsdt: &acpi::Xsdt = acpi::Xsdt::from_raw(rsdp.xsdt);
-                let sdt_iter = xsdt.other_sdts
-                    .array_chunks::<8>()
-                    .map(|x| usize::from_ne_bytes(*x) as *const acpi::SdtHeader);
-
-                for sdt in sdt_iter {
-                    let sig = &(*sdt).signature;
-                    let sig = core::str::from_utf8_unchecked(sig);
-                    let oid = &(*sdt).oem_id;
-                    let oid = core::str::from_utf8_unchecked(oid);
-                    brint!(out, "\tsignature: {:?} oem_id: {:?}\n", sig, oid);
-                }
-            }
-        }
+    if !result.is_ok() {
+        // TODO: print on uefi console?
+        return Err(result);
     }
 
-    let (_, memmap) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
+    let bootinfo_ptr = bootinfo_ptr.cast::<Bootinfo>();
+    unsafe { bootinfo_ptr.write_bytes(0u8, 1) };
+    STUFF_PTR.store(bootinfo_ptr, Ordering::SeqCst);
+    let bootinfo = unsafe { &mut *bootinfo_ptr };
 
-    let mut addr = 0;
-    let mut len = 0;
+    let result = setup_framebuffer(boot_services, bootinfo);
+    if !result.is_ok() {
+        return Err(result);
+    }
+
+    return Ok(bootinfo);
+}
+
+#[no_mangle]
+extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTable) -> uefi::RawStatus {
+    if st.is_null() {
+        return uefi::RawStatus::from_error(uefi::Error::HttpError);
+    }
+    let boot_services = match unsafe { (*st).boot_services } {
+        Some(p) => unsafe { p.as_ref() },
+        None => return uefi::RawStatus::from_error(uefi::Error::IpAddressConflict),
+    };
+
+    let bootinfo = match base_setup(boot_services) {
+        Ok(b) => b,
+        Err(status) => return status,
+    };
+
+    let (memkey, memmap) = boot_services.get_memory_map(&mut bootinfo.buf).unwrap();
+    const TYPICAL_MEMORY: uefi::memory::Attributes = uefi::memory::Attributes::new()
+        .set_noncacheable()
+        .set_write_combine()
+        .set_write_through()
+        .set_write_back();
+
     for map in memmap {
         use uefi::memory::Type;
-
         let mtyp = Type::from_int(map.typ);
 
-        if mtyp == Some(Type::BootServicesCode)
-            || mtyp == Some(Type::BootServicesData)
-            || mtyp == Some(Type::Conventional)
-        {
-            if map.phys_start == addr + len {
-                len += map.pages * 4096;
-            } else {
-                brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
-                addr = map.phys_start;
-                len = map.pages * 4096;
-            }
-            continue;
+        // brint!(bootinfo.fb, "{:?}\n", map);
+        if mtyp == Some(Type::Conventional) {
+            assert_eq!(map.attributes, TYPICAL_MEMORY);
+            bootinfo.free_memory.push(FreeMemory{ phys_start: map.phys_start, pages: map.pages });
+        } else {
+            bootinfo.uefi_meminfo.push(*map);
         }
-
-        brint!(out, "\t{:?}\n", map);
     }
-    brint!(out, "\tFree memory addr={:016X} len={}kb\n", addr, len / 1024);
 
-    //prepare_kernel_elf(&mut out);
-
-    let cr4 = cpu::Cr4::get();
-    let cr0 = cpu::Cr0::get();
-    brint!(out, "CR4: {:?}\n", cr4);
-    brint!(out, "CR0: {:?}\n", cr0);
-
-    let (memkey, _) = boot_services.get_memory_map(unsafe { &mut BUF }).unwrap();
     let ok = unsafe { boot_services.exit_boot_services(handle, memkey) };
     assert_eq!(ok, Ok(()));
-    brint!(out, "Exit boot services\n");
+    brint!(bootinfo.fb, "Exit boot services\n");
 
-    use cpu::segmentation::GDTR;
-    let gdtr = GDTR::new(&bootinfo.gdt);
-    unsafe { gdtr.apply(); }
-    brint!(out, "GDT applied\n");
-
-    use cpu::interrupt;
-    extern "sysv64" fn _dummy_handler(_ii: &mut interrupt::Stack) {
-        loop { cpu::halt() };
-    }
-    let dummy_handler = interrupt::make_handler!(_dummy_handler);
-    let idt_flags = interrupt::Flags::new_interrupt()
-        .disable_interrupts()
-        .set_present();
-    let idt_entry = interrupt::Entry::with_handler_and_flags(dummy_handler, idt_flags);
-    bootinfo.idt = [idt_entry; 256];
-    let idtr = interrupt::TableRegister::new(&bootinfo.idt);
-    unsafe { idtr.apply(); }
-    brint!(out, "IDT applied\n");
-
-    todo!("Actually load the ELF");
+    bootinfo.uefi_systable = unsafe { Some(&*st) };
+    post_boot_services(bootinfo);
 }
 
-/*
-fn prepare_kernel_elf(out: &mut impl core::fmt::Write) {
-    let kernel = KERNEL;
-    brint!(out, "\nkernel ELF is placed at {:p}, size={}\n", kernel, core::mem::size_of_val(kernel));
-
-    let kernelelf: Elf<elf::Amd64> = Elf::from_bytes(kernel).unwrap();
-    let pheaders = kernelelf.program_headers().unwrap();
-    let sheaders = kernelelf.section_headers().unwrap();
-
-    brint!(out, "{:?} {:?} {:?} {:?} {:?} 0x{:X}\n",
-        kernelelf.header().machine(),
-        kernelelf.header().typ(),
-        kernelelf.header().e_ident.osabi(),
-        kernelelf.header().e_ident.class(),
-        kernelelf.header().e_ident.data(),
-        kernelelf.header().e_entry.unwrap(),
-    );
-    brint!(out, "Program headers: {:#?}\n", pheaders);
-    brint!(out, "Section headers: {:#?}\n", sheaders);
+fn post_boot_services(bootinfo: &'static mut Bootinfo) -> ! {
+    todo!()
 }
-*/

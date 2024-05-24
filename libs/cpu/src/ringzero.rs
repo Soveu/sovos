@@ -284,7 +284,7 @@ impl Cr2 {
 }
 
 #[repr(transparent)]
-pub struct Cr3(u64);
+pub struct Cr3(pub u64);
 
 impl Cr3 {
     pub fn from_addr(addr: PhysAddr<paging::Table<paging::PML4Entry>>) -> Self {

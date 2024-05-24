@@ -1,4 +1,5 @@
 #[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct RawStatus(pub usize);
 
 impl RawStatus {
@@ -48,6 +49,22 @@ impl RawStatus {
             "Invalid UEFI implementation - got Error::{:?}, expected one of {:?}",
             error, expected_errors,
         );
+    }
+
+    pub const fn ok() -> Self {
+        Self(0)
+    }
+
+    pub const fn from_warning(w: Warning) -> Self {
+        Self(w as usize)
+    }
+
+    pub const fn from_error(e: Error) -> Self {
+        Self(0x8000_0000_0000_000 + e as usize)
+    }
+
+    pub const fn is_ok(self) -> bool {
+        self.0 == 0
     }
 }
 

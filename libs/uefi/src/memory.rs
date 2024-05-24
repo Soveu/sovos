@@ -4,6 +4,7 @@ use impl_bits::impl_bits;
 pub struct MapKey(pub(crate) u64);
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Descriptor {
     /// Type of the memory region. Type EFI_MEMORY_TYPE is defined in the
     /// AllocatePages() function description.
@@ -39,14 +40,19 @@ pub struct Descriptor {
 impl core::fmt::Debug for Descriptor {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "Descriptor {{ phys_start: {:016X}, virt_start: {:016X}, pages: {}, \
-             attributes: {:?}, type: {:?} }}",
+            "Descriptor {{ phys_start: {:010X}, virt_start: {:016X}, pages: {: <4}, \
+             attributes: {:?}, type: ",
             self.phys_start,
             self.virt_start,
             self.pages,
             self.attributes,
-            self.memory_type(),
-        ))
+        ))?;
+
+        if let Some(typ) = self.memory_type() {
+            typ.fmt(f)?;
+            return f.write_str(" }");
+        }
+        return f.write_str("UNKNOWN");
     }
 }
 
@@ -154,7 +160,12 @@ impl<'buf> Iterator for DescriptorIterator<'buf> {
 }
 
 #[repr(transparent)]
+#[derive(PartialEq, Eq)]
 pub struct Attributes(u64);
+
+impl Attributes {
+    pub const fn new() -> Self { Self(0) }
+}
 
 impl_bits! {
     Attributes = {

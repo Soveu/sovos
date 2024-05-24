@@ -83,7 +83,7 @@ fn run(current_dir: PathBuf) -> Return {
         "-drive", "format=raw,file=fat:rw:fat/",
         "-enable-kvm",
         "-cpu", "host",
-        "-m", "8G",
+        "-m", "2G",
         //"-d", "int,cpu_reset,guest_errors",
         "-no-reboot",
         //"-nographic",

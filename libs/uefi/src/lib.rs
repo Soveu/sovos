@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(maybe_uninit_slice)]
 
-use core::mem::MaybeUninit;
 use core::ptr::NonNull;
 use core::num::NonZeroUsize;
 

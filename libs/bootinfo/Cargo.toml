@@ -12,3 +12,4 @@ arrayvec = { version = "0.7", default-features = false }
 
 cpu = { path = "../cpu", version = "*" }
 uefi = { path = "../uefi", version = "*" }
+fb = { path = "../fb", version = "*" }

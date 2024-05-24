@@ -3,6 +3,44 @@
 #[doc(hidden)]
 pub use paste;
 
+// Scraped from DebugList, as it only takes Debug parameters, not Display :(
+pub struct DisplayList<'a, 'b: 'a> {
+    pub fmt: &'a mut core::fmt::Formatter<'b>,
+    pub result: core::fmt::Result,
+    pub has_fields: bool,
+}
+
+impl<'a, 'b: 'a> DisplayList<'a, 'b> {
+    pub fn new(fmt: &'a mut core::fmt::Formatter<'b>) -> Self {
+        let result = fmt.write_str("[");
+        Self {
+            fmt,
+            result,
+            has_fields: false,
+        }
+    }
+
+    pub fn entry(&mut self, entry: &dyn core::fmt::Display)
+    {
+        if self.result.is_err() {
+            return;
+        }
+
+        self.result = self.result.and_then(|_| {
+            if self.has_fields {
+                self.fmt.write_str(", ")?;
+            }
+            entry.fmt(self.fmt)
+        });
+
+        self.has_fields = true;
+    }
+
+    pub fn finish(self) -> core::fmt::Result {
+        self.result.and_then(|_| self.fmt.write_str("]"))
+    }
+}
+
 #[macro_export]
 macro_rules! impl_bits {
     {
@@ -47,16 +85,16 @@ macro_rules! impl_bits {
         }
         impl ::core::fmt::Debug for $structname {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                f.write_str("[")?;
+                let mut f = $crate::DisplayList::new(f);
 
                 $(
                 if self.$fname() {
-                    let bitname = concat!(stringify!($fname), ", ");
-                    f.write_str(bitname)?;
+                    let bitname = stringify!($fname);
+                    f.entry(&bitname);
                 }
                 )*
 
-                f.write_str("]")
+                f.finish()
             }
         }
     }
