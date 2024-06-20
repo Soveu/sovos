@@ -15,5 +15,5 @@ members = [
 [profile.release]
 debug = true
 
-[patch.crates-io]
-arrayvec = { git = "https://github.com/saethlin/arrayvec.git", branch = "fix-aliasing" }
+#[patch.crates-io]
+#arrayvec = { git = "https://github.com/saethlin/arrayvec.git", branch = "fix-aliasing" }

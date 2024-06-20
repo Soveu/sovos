@@ -1,14 +1,22 @@
 #![no_std]
 #![no_main]
 
+#![allow(unused_parens)]
+#![feature(exposed_provenance)]
+#![feature(strict_provenance)]
 #![feature(panic_info_message)]
+#![feature(naked_functions)]
 
 use uefi;
 use fb;
 use bootinfo::*;
 use core::sync::atomic::{Ordering, AtomicPtr};
 use core::fmt::Write;
+use core::ptr::NonNull;
+use arrayvec;
 
+const VIRT_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
+const BOOTINFO_SIZE_PAGES: u64 = (core::mem::size_of::<Bootinfo>() / 4096) as u64;
 static STUFF_PTR: AtomicPtr<Bootinfo> = AtomicPtr::new(core::ptr::null_mut());
 
 macro_rules! brint {
@@ -104,8 +112,7 @@ fn allocate_pages(boot_services: &uefi::BootServices, pages: u32) -> (*mut u8, u
 
 fn base_setup(boot_services: &uefi::BootServices) -> Result<&'static mut Bootinfo, uefi::RawStatus> {
     // First, we need to allocate some memory for global state (framebuffer, memory information..)
-    let pages = core::mem::size_of::<Bootinfo>() / 4096;
-    let (bootinfo_ptr, result) = allocate_pages(boot_services, pages as u32);
+    let (bootinfo_ptr, result) = allocate_pages(boot_services, BOOTINFO_SIZE_PAGES as u32);
 
     if !result.is_ok() {
         // TODO: print on uefi console?
@@ -152,11 +159,10 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
         let mtyp = Type::from_int(map.typ);
 
         // brint!(bootinfo.fb, "{:?}\n", map);
+        bootinfo.uefi_meminfo.push(*map);
         if mtyp == Some(Type::Conventional) {
             assert_eq!(map.attributes, TYPICAL_MEMORY);
             bootinfo.free_memory.push(FreeMemory{ phys_start: map.phys_start, pages: map.pages });
-        } else {
-            bootinfo.uefi_meminfo.push(*map);
         }
     }
 
@@ -168,6 +174,150 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     post_boot_services(bootinfo);
 }
 
+type FreeMemoryVec = arrayvec::ArrayVec<bootinfo::FreeMemory, 32>;
+
+// TODO: zero out stuff
+fn post_allocate_page(free_memory: &mut FreeMemoryVec, pages: u64) -> NonNull<u8> {
+    for i in 0..free_memory.len() {
+        let mem = &mut free_memory[i];
+        if mem.pages > pages {
+            let result = core::ptr::with_exposed_provenance_mut(mem.phys_start as usize);
+            mem.phys_start += (pages * 4096);
+            mem.pages -= pages;
+            return NonNull::new(result).unwrap();
+        } else if mem.pages == pages {
+            let result = core::ptr::with_exposed_provenance_mut(free_memory.remove(i).phys_start as usize);
+            return NonNull::new(result).unwrap();
+        }
+    }
+
+    panic!("Out of memory, requested {} pages", pages);
+}
+
+fn setup_dummy_instruction_page(bootinfo: &mut Bootinfo) -> NonNull<u8> {
+    const INFINITE_LOOP: u16 = 0xFEEB;
+    const UD2: u16 = 0x0B0F;
+    let mut instr = post_allocate_page(&mut bootinfo.free_memory, 1).cast::<[u16; 2048]>();
+    let instr_ref = unsafe { instr.as_mut() };
+    instr_ref.fill(UD2);
+    instr_ref[0] = INFINITE_LOOP;
+    return instr.cast::<u8>();
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Permissions {
+    None,
+    Readonly,
+    ReadWrite,
+    ReadExec,
+}
+
+
+fn _map_memory_page(
+    free_memory: &mut FreeMemoryVec,
+    mut paging: NonNull<[*const u8; 512]>,
+    phys_addr: u64,
+    perm: Permissions,
+    level: u8,
+) {
+    let virt = phys_addr + VIRT_OFFSET;
+    let idx = (virt >> (12 + level * 9)) & 0xFFF;
+    let idx = idx as usize;
+
+    let paging = unsafe { paging.as_mut() };
+
+    if let Some(lower_level) = level.checked_sub(1) {
+        let lower = paging[idx] as *mut u8;
+        let lower = match NonNull::new(lower) {
+            Some(x) => x,
+            None => post_allocate_page(free_memory, 1),
+        };
+        paging[idx] = lower.as_ptr(); // TODO: flags
+        return _map_memory_page(free_memory, lower.cast(), phys_addr, perm, lower_level);
+    }
+
+    // TODO: flags
+    paging[idx] = core::ptr::null::<u8>().with_addr(virt as usize);
+}
+
+fn map_memory_page(
+    free_memory: &mut FreeMemoryVec,
+    paging: NonNull<[*const u8; 512]>,
+    phys_addr: u64,
+    perm: Permissions,
+) {
+    // TODO: also, consider memory flags (like writethrough)
+    assert!(phys_addr & 0xFFF == 0);
+    _map_memory_page(free_memory, paging, phys_addr, perm, 3);
+}
+
+fn uefi_type_to_perm(typ: uefi::memory::Type) -> Permissions {
+    use uefi::memory::Type;
+    return match typ {
+        Type::Reserved
+        | Type::Unusable => Permissions::None,
+        Type::LoaderCode
+        | Type::LoaderData
+        | Type::BootServicesData
+        | Type::BootServicesCode
+        | Type::RuntimeServicesData
+        | Type::Mmio
+        | Type::MmioPortSpace
+        | Type::Persistent
+        | Type::Conventional => Permissions::ReadWrite,
+        Type::RuntimeServicesCode => Permissions::ReadExec,
+        Type::AcpiReclaim
+        | Type::AcpiNVS
+        | Type::PalCode => Permissions::Readonly,
+    };
+}
+
+fn map_whole_memory(bootinfo: &mut Bootinfo, paging: NonNull<[*const u8; 512]>) {
+    use uefi::memory::Type;
+    for mem in bootinfo.uefi_meminfo.iter() {
+        let perm = uefi_type_to_perm(Type::from_int(mem.typ).unwrap());
+        for offset in 0..mem.pages {
+            let phys = mem.phys_start + offset * 4096;
+            map_memory_page(&mut bootinfo.free_memory, paging, phys, perm);
+        }
+    }
+}
+
+fn ref_to_addr<T>(r: *const T) -> u64 {
+    r.addr() as u64
+}
+
 fn post_boot_services(bootinfo: &'static mut Bootinfo) -> ! {
-    todo!()
+    let paging = post_allocate_page(&mut bootinfo.free_memory, 1).cast::<[*const u8; 512]>();
+
+    let instr = setup_dummy_instruction_page(bootinfo);
+    let instr_addr = instr.addr().get() as u64;
+    map_memory_page(&mut bootinfo.free_memory, paging, instr_addr, Permissions::ReadExec);
+
+    let bootinfo_addr = ref_to_addr(&bootinfo);
+    for offset in 0..BOOTINFO_SIZE_PAGES {
+        let phys = bootinfo_addr + offset * 4096;
+        map_memory_page(&mut bootinfo.free_memory, paging, phys, Permissions::ReadWrite);
+    }
+
+    map_whole_memory(bootinfo, paging);
+    setup_idt_gdt(bootinfo, instr_addr);
+    let cr3 = cpu::Cr3(paging.addr().get() as u64);
+    great_jump(bootinfo, cr3);
+}
+
+fn setup_idt_gdt(_bootinfo: &mut Bootinfo, _entry_after_jump: u64) {
+    todo!();
+}
+
+#[naked]
+extern "sysv64" fn great_jump(bootinfo: &'static mut Bootinfo, paging: cpu::Cr3) -> ! {
+    unsafe {
+        core::arch::asm!(
+            "mov rsp, rdi",
+            "mov cr3, rsi",
+            "ud2",
+            options(noreturn),
+        );
+    }
 }

@@ -323,7 +323,7 @@ impl Cr3 {
 
     pub unsafe fn set(cr3: Self) {
         asm!(
-            "mov cr0, {:r}",
+            "mov cr3, {:r}",
             in(reg) cr3.0,
             options(nomem, nostack)
         );
