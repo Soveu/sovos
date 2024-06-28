@@ -106,12 +106,12 @@ impl GlobalDescriptorTable {
 }
 
 #[repr(C, packed)]
-pub struct GDTR {
-    limit: u16,
-    base:  *const GlobalDescriptorTable,
+pub struct Gdtr {
+    pub limit: u16,
+    pub base:  *const GlobalDescriptorTable,
 }
 
-impl GDTR {
+impl Gdtr {
     pub fn read() -> Self {
         let mut gdtr = Self { limit: 0, base: ptr::null() };
         unsafe {

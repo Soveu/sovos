@@ -2,6 +2,7 @@
 #![no_main]
 
 #![allow(unused_parens)]
+#![feature(asm_const)]
 #![feature(exposed_provenance)]
 #![feature(strict_provenance)]
 #![feature(panic_info_message)]
@@ -15,7 +16,12 @@ use core::fmt::Write;
 use core::ptr::NonNull;
 use arrayvec;
 
-const VIRT_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
+const PRESENT: u64 = (1 << 0);
+const WRITABLE: u64 = (1 << 1);
+const NONCACHABLE: u64 = (1 << 4);
+const NX: u64 = (1 << 63);
+const VIRT_OFFSET: u64 = 0xFFFF_8000_0000_0000;
+const PTR_MASK: usize  = 0x0000_FFFF_FFFF_F000;
 const BOOTINFO_SIZE_PAGES: u64 = (core::mem::size_of::<Bootinfo>() / 4096) as u64;
 static STUFF_PTR: AtomicPtr<Bootinfo> = AtomicPtr::new(core::ptr::null_mut());
 
@@ -36,9 +42,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
         let _ = fb.write_str("Panic at unknown location\n");
     }
 
-    if let Some(msg) = info.message() {
-        let _ = fb.write_fmt(*msg);
-    }
+    // let _ = write!(fb, "Message: '{}'", info.message());
 
     loop {
         cpu::halt();
@@ -58,6 +62,7 @@ fn setup_framebuffer(boot_services: &uefi::BootServices, bootinfo: &mut Bootinfo
     let out = &mut bootinfo.fb;
     *out = fb::Framebuffer {
         base: gop_mode.framebuffer_base as *mut u8,
+        memsize: gop_mode.framebuffer_size,
         scanline_width: gop_info.pixels_per_scanline as usize,
         max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
         max_y: (gop_info.vertical_res as usize / fb::FONT_Y) as u16,
@@ -73,6 +78,11 @@ fn setup_framebuffer(boot_services: &uefi::BootServices, bootinfo: &mut Bootinfo
         .max_by_key(|(_, m)| m.horizontal_res * m.vertical_res)
         .unwrap();
 
+    if gop_mode.mode == mode_index {
+        brint!(out, "Current graphics mode is optimal\n");
+        return uefi::RawStatus::ok();
+    }
+
     let (x, y) = (new_mode.horizontal_res, new_mode.vertical_res);
     brint!(out, "Switching mode to {}x{}\n", new_mode.horizontal_res, new_mode.vertical_res);
     gop.set_mode(mode_index).unwrap();
@@ -81,6 +91,7 @@ fn setup_framebuffer(boot_services: &uefi::BootServices, bootinfo: &mut Bootinfo
 
     *out = fb::Framebuffer {
         base: gop_mode.framebuffer_base as *mut u8,
+        memsize: gop_mode.framebuffer_size,
         scanline_width: gop_info.pixels_per_scanline as usize,
         max_x: (gop_info.horizontal_res as usize / fb::FONT_X) as u16,
         max_y: (gop_info.vertical_res as usize / fb::FONT_Y) as u16,
@@ -160,6 +171,11 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
 
         // brint!(bootinfo.fb, "{:?}\n", map);
         bootinfo.uefi_meminfo.push(*map);
+
+        if map.phys_start == 0 {
+            continue; // We don't quite want to allocate null pointer later, but we should do something with this
+        }
+
         if mtyp == Some(Type::Conventional) {
             assert_eq!(map.attributes, TYPICAL_MEMORY);
             bootinfo.free_memory.push(FreeMemory{ phys_start: map.phys_start, pages: map.pages });
@@ -204,120 +220,166 @@ fn setup_dummy_instruction_page(bootinfo: &mut Bootinfo) -> NonNull<u8> {
     return instr.cast::<u8>();
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Permissions {
-    None,
-    Readonly,
-    ReadWrite,
-    ReadExec,
-}
-
-
 fn _map_memory_page(
     free_memory: &mut FreeMemoryVec,
-    mut paging: NonNull<[*const u8; 512]>,
+    mut paging: NonNull<[*mut u8; 512]>,
     phys_addr: u64,
-    perm: Permissions,
+    flags: u64,
     level: u8,
+    offset: u64,
 ) {
-    let virt = phys_addr + VIRT_OFFSET;
-    let idx = (virt >> (12 + level * 9)) & 0xFFF;
+    let virt = phys_addr + offset;
+    // let virt = phys_addr;
+    let idx = (virt >> (12 + level * 9)) & 0x1FF;
     let idx = idx as usize;
 
     let paging = unsafe { paging.as_mut() };
 
     if let Some(lower_level) = level.checked_sub(1) {
-        let lower = paging[idx] as *mut u8;
-        let lower = match NonNull::new(lower) {
-            Some(x) => x,
-            None => post_allocate_page(free_memory, 1),
-        };
-        paging[idx] = lower.as_ptr(); // TODO: flags
-        return _map_memory_page(free_memory, lower.cast(), phys_addr, perm, lower_level);
+        if paging[idx].is_null() {
+            let mut p = post_allocate_page(free_memory, 1).cast::<[*mut u8; 512]>();
+            unsafe { p.as_mut().fill(core::ptr::null_mut()); }
+            paging[idx] = p.as_ptr().map_addr(|x| x | 0b11).cast(); // present | readwrite
+        }
+
+        let lower = NonNull::new(paging[idx].map_addr(|p| p & PTR_MASK)).unwrap();
+        return _map_memory_page(free_memory, lower.cast(), phys_addr, flags, lower_level, offset);
     }
 
-    // TODO: flags
-    paging[idx] = core::ptr::null::<u8>().with_addr(virt as usize);
+    if !paging[idx].is_null() { return; }
+    let entry = phys_addr | flags;
+    paging[idx] = core::ptr::null_mut::<u8>().with_addr(entry as usize);
 }
 
 fn map_memory_page(
     free_memory: &mut FreeMemoryVec,
-    paging: NonNull<[*const u8; 512]>,
+    paging: NonNull<[*mut u8; 512]>,
     phys_addr: u64,
-    perm: Permissions,
+    flags: u64,
 ) {
-    // TODO: also, consider memory flags (like writethrough)
     assert!(phys_addr & 0xFFF == 0);
-    _map_memory_page(free_memory, paging, phys_addr, perm, 3);
+    _map_memory_page(free_memory, paging, phys_addr, flags, 3, VIRT_OFFSET);
+    // _map_memory_page(free_memory, paging, phys_addr, flags, 3, 0);
 }
 
-fn uefi_type_to_perm(typ: uefi::memory::Type) -> Permissions {
+fn uefi_type_to_flags(typ: uefi::memory::Type) -> u64 {
     use uefi::memory::Type;
     return match typ {
         Type::Reserved
-        | Type::Unusable => Permissions::None,
-        Type::LoaderCode
-        | Type::LoaderData
-        | Type::BootServicesData
+        | Type::Unusable => 0,
+        Type::Mmio
+        | Type::MmioPortSpace => PRESENT | WRITABLE | NX | NONCACHABLE,
+        Type::LoaderData
         | Type::BootServicesCode
+        | Type::BootServicesData
         | Type::RuntimeServicesData
-        | Type::Mmio
-        | Type::MmioPortSpace
         | Type::Persistent
-        | Type::Conventional => Permissions::ReadWrite,
-        Type::RuntimeServicesCode => Permissions::ReadExec,
+        | Type::Conventional => PRESENT | WRITABLE | NX,
+        Type::LoaderCode
+        | Type::RuntimeServicesCode => PRESENT,
         Type::AcpiReclaim
         | Type::AcpiNVS
-        | Type::PalCode => Permissions::Readonly,
+        | Type::PalCode => PRESENT | NX,
     };
 }
 
-fn map_whole_memory(bootinfo: &mut Bootinfo, paging: NonNull<[*const u8; 512]>) {
+fn map_whole_memory(bootinfo: &mut Bootinfo, paging: NonNull<[*mut u8; 512]>) {
     use uefi::memory::Type;
     for mem in bootinfo.uefi_meminfo.iter() {
-        let perm = uefi_type_to_perm(Type::from_int(mem.typ).unwrap());
+        let flags = uefi_type_to_flags(Type::from_int(mem.typ).unwrap());
+        if flags == 0 {
+            continue;
+        }
         for offset in 0..mem.pages {
             let phys = mem.phys_start + offset * 4096;
-            map_memory_page(&mut bootinfo.free_memory, paging, phys, perm);
+            assert!(phys & 0xFFF == 0);
+            map_memory_page(&mut bootinfo.free_memory, paging, phys, flags);
         }
     }
 }
 
-fn ref_to_addr<T>(r: *const T) -> u64 {
+fn ref_to_addr<T: 'static>(r: *const T) -> u64 {
     r.addr() as u64
 }
 
 fn post_boot_services(bootinfo: &'static mut Bootinfo) -> ! {
-    let paging = post_allocate_page(&mut bootinfo.free_memory, 1).cast::<[*const u8; 512]>();
+    let mut paging = post_allocate_page(&mut bootinfo.free_memory, 1).cast::<[*mut u8; 512]>();
+    unsafe { paging.as_mut().fill(core::ptr::null_mut()); }
 
     let instr = setup_dummy_instruction_page(bootinfo);
     let instr_addr = instr.addr().get() as u64;
-    map_memory_page(&mut bootinfo.free_memory, paging, instr_addr, Permissions::ReadExec);
+    map_memory_page(&mut bootinfo.free_memory, paging, instr_addr, PRESENT);
 
-    let bootinfo_addr = ref_to_addr(&bootinfo);
+    let bootinfo_addr = ref_to_addr(bootinfo);
     for offset in 0..BOOTINFO_SIZE_PAGES {
         let phys = bootinfo_addr + offset * 4096;
-        map_memory_page(&mut bootinfo.free_memory, paging, phys, Permissions::ReadWrite);
+        map_memory_page(&mut bootinfo.free_memory, paging, phys, PRESENT | WRITABLE | NX);
     }
 
+    let fb_addr = ref_to_addr(bootinfo.fb.base);
+    let fb_memsize = bootinfo.fb.memsize as u64;
+    assert!(fb_memsize % 4096 == 0);
+    brint!(bootinfo.fb, "fb_addr={:X}\n", fb_addr);
+    let fb_pagesize = fb_memsize / 4096;
+    for offset in 0..fb_pagesize {
+        let phys = fb_addr + offset * 4096;
+        map_memory_page(&mut bootinfo.free_memory, paging, phys, PRESENT | WRITABLE | NX);
+    }
+
+    brint!(bootinfo.fb, "Mapping memory\n");
     map_whole_memory(bootinfo, paging);
-    setup_idt_gdt(bootinfo, instr_addr);
+    brint!(bootinfo.fb, "Setting up IDT and GDT\n");
+    setup_gdt(bootinfo);
+    setup_idt(bootinfo, instr_addr);
+
     let cr3 = cpu::Cr3(paging.addr().get() as u64);
-    great_jump(bootinfo, cr3);
-}
-
-fn setup_idt_gdt(_bootinfo: &mut Bootinfo, _entry_after_jump: u64) {
-    todo!();
-}
-
-#[naked]
-extern "sysv64" fn great_jump(bootinfo: &'static mut Bootinfo, paging: cpu::Cr3) -> ! {
+    let cpu::interrupt::TableRegister { limit, base } = cpu::interrupt::TableRegister::read();
+    brint!(bootinfo.fb, "IDTR limit={:x} base={:p}\n", limit, base);
+    let new_stack_ptr = &bootinfo as *const _ as usize as u64;
+    let new_stack_ptr = new_stack_ptr + VIRT_OFFSET + 4096;
     unsafe {
         core::arch::asm!(
-            "mov rsp, rdi",
-            "mov cr3, rsi",
+            "mov rsp, {new_stack}",
+            "mov cr3, {cr3}",
             "ud2",
-            options(noreturn),
+            new_stack = in(reg) new_stack_ptr,
+            cr3 = in(reg) cr3.0,
+            options(nostack, noreturn),
         );
     }
+}
+
+fn setup_gdt(bootinfo: &mut Bootinfo) {
+    bootinfo.gdt = cpu::segmentation::GlobalDescriptorTable::new();
+    unsafe { cpu::segmentation::Gdtr::new(&bootinfo.gdt).apply() };
+
+    let limit = (core::mem::size_of::<cpu::segmentation::GlobalDescriptorTable>() - 1) as u16;
+    let base: *const cpu::segmentation::GlobalDescriptorTable = &bootinfo.gdt;
+    let base = base.map_addr(|p| p + VIRT_OFFSET as usize);
+    let gdtr = cpu::segmentation::Gdtr { limit, base };
+    unsafe {
+        core::arch::asm!("lgdt [{}]", in(reg) &gdtr, options(nostack, readonly));
+    }
+
+    // let cpu::segmentation::Gdtr { limit, base } = cpu::segmentation::Gdtr::read();
+    // brint!(bootinfo.fb, "GDTR limit={:x} base={:p}", limit, base);
+}
+
+fn setup_idt(bootinfo: &mut Bootinfo, entry_after_jump: u64) {
+    bootinfo.idt.fill(cpu::interrupt::Entry::new());
+    // let addr = entry_after_jump + VIRT_OFFSET;
+    let addr = entry_after_jump + VIRT_OFFSET;
+    let flags = cpu::interrupt::Flags::new_interrupt().set_present();
+    bootinfo.idt.fill(cpu::interrupt::Entry::with_handler_and_flags(addr, flags));
+
+    // unsafe { cpu::interrupt::TableRegister::new(&bootinfo.idt).apply(); }
+
+    let bootinfo_asdf: *const cpu::interrupt::Table = &bootinfo.idt;
+    let bootinfo_asdf = bootinfo_asdf.map_addr(|p| (p + VIRT_OFFSET as usize));
+    let idtr = cpu::interrupt::TableRegister { limit: 16 * 256 - 1, base: bootinfo_asdf };
+    brint!(bootinfo.fb, "Applying IDTR with limit={:x} base={:p}\n", 16 * 256 - 1, bootinfo_asdf);
+    unsafe { idtr.apply(); }
+
+    // let cpu::interrupt::TableRegister { limit, base } = cpu::interrupt::TableRegister::read();
+    // brint!(bootinfo.fb, "IDTR limit={:x} base={:p}\n", limit, base);
 }

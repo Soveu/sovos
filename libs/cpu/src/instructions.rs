@@ -93,7 +93,7 @@ pub unsafe fn rep_outsb(port: u16, ptr: *const u8, sz: usize) {
         in("dx") port,
         in("rsi") ptr,
         in("rcx") sz,
-        options(nostack, nomem),
+        options(nostack, readonly),
     );
 }
 

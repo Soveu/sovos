@@ -24,6 +24,7 @@ pub enum Mode {
 #[repr(C)]
 pub struct Framebuffer {
     pub base: *mut u8,
+    pub memsize: usize,
 
     pub scanline_width: usize,
 

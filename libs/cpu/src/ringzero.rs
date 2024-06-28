@@ -196,6 +196,12 @@ impl_bits!(Cr4 = {
 });
 
 impl Cr4 {
+    pub fn new(phys_addr: u64, pcid: u16) -> Self {
+        debug_assert!(phys_addr & 0xFFF == 0);
+        debug_assert!(pcid <= 0xFFF);
+        Self(phys_addr | (pcid as u64))
+    }
+
     pub fn get() -> Self {
         let cr4: u64;
 
@@ -325,7 +331,7 @@ impl Cr3 {
         asm!(
             "mov cr3, {:r}",
             in(reg) cr3.0,
-            options(nomem, nostack)
+            options(nostack)
         );
     }
 }

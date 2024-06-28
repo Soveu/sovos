@@ -60,8 +60,8 @@ impl Entry {
         }
     }
 
-    pub fn with_handler_and_flags(f: extern "x86-interrupt" fn(), flags: Flags) -> Self {
-        let raw = f as usize;
+    pub fn with_handler_and_flags(fn_virt_addr: u64, flags: Flags) -> Self {
+        let raw = fn_virt_addr;
         let ptr_lower = raw as u16;
         let ptr_mid = (raw >> 16) as u16;
         let ptr_high = (raw >> 32) as u32;
@@ -83,8 +83,8 @@ pub type Table = [Entry; 256];
 
 #[repr(C, packed)]
 pub struct TableRegister {
-    limit: u16,
-    base:  *const Table,
+    pub limit: u16,
+    pub base:  *const Table,
 }
 
 impl TableRegister {
@@ -97,7 +97,7 @@ impl TableRegister {
     }
 
     pub unsafe fn apply(&self) {
-        asm!("lidt [{}]", in(reg) self, options(nostack, nomem));
+        asm!("lidt [{}]", in(reg) self, options(nostack, readonly));
     }
 
     pub fn new(table: &Table) -> Self {
