@@ -2,38 +2,9 @@
 use core::ptr;
 use core::arch::asm;
 
-use super::Ring;
-
 pub enum TableIndicator {
     GDT = 0,
     LDT = 1,
-}
-
-#[repr(transparent)]
-pub struct SegmentSelector(u16);
-
-impl SegmentSelector {
-    pub fn index(&self) -> u16 {
-        self.0 >> 3
-    }
-
-    pub fn table_indicator(&self) -> TableIndicator {
-        match (self.0 >> 2) & 1 {
-            0 => TableIndicator::GDT,
-            1 => TableIndicator::LDT,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn requested_privilege_level(&self) -> Ring {
-        match (self.0 >> 12) & 0b11 {
-            0 => Ring::Zero,
-            1 => Ring::One,
-            2 => Ring::Two,
-            3 => Ring::Three,
-            _ => unreachable!(),
-        }
-    }
 }
 
 #[repr(transparent)]
@@ -43,22 +14,6 @@ pub struct CodeSegmentDescriptor(u64);
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct DataSegmentDescriptor(u64);
-
-#[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct TaskSegmentDescriptor(u128);
-
-#[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct CallGate(u128);
-
-#[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct TrapGate(u128);
-
-#[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct InterruptGate(u128);
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
