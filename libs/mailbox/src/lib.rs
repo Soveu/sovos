@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(unused_unsafe)]
+#![allow(dropping_references)]
 
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;

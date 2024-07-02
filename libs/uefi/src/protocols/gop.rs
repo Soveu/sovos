@@ -1,6 +1,7 @@
 use crate::*;
 
 #[repr(C)]
+#[allow(dead_code)] // https://github.com/rust-lang/rust/issues/126169
 pub struct GraphicsOutput {
     /// ## Parameters
     /// * This - The EFI_GRAPHICS_OUTPUT_PROTOCOL instance.
@@ -34,7 +35,7 @@ pub struct GraphicsOutput {
     /// EFI_DEVICE_ERROR A hardware error occurred trying to retrieve the video mode.
     /// EFI_INVALID_PARAMETER ModeNumber is not valid.
     query_mode: Option<
-        extern "efiapi" fn(
+        unsafe extern "efiapi" fn(
             this: &Self,
             mode_number: u32,
             size_of_info: &mut usize,
@@ -160,7 +161,7 @@ impl GraphicsOutput {
         let mut sz = 0usize;
         let mut p: *const ModeInformation = core::ptr::null();
         let f = self.query_mode.expect("buggy UEFI: query_mode is null");
-        let result = (f)(self, mode_number, &mut sz, &mut p);
+        let result = unsafe { (f)(self, mode_number, &mut sz, &mut p) };
 
         assert!(core::mem::size_of::<ModeInformation>() <= sz);
 

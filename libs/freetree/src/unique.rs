@@ -61,13 +61,13 @@ impl<T: ?Sized> Unique<T> {
 }
 
 impl<T> Unique<T> {
-    /// Returns the inner pointer as usize.
+    /// Returns the inner pointer as usize without exposing provenance.
     pub fn addr(seif: &Self) -> usize {
         seif.0.as_ptr().addr()
     }
 
-    /// Returns the inner pointer as usize.
-    pub fn expose_addr(seif: &Self) -> usize {
-        seif.0.as_ptr().expose_addr()
+    /// Leaks the inner pointer as and returns its address as usize.
+    pub fn expose_provenance(seif: Self) -> usize {
+        Self::into_raw(seif).expose_provenance()
     }
 }

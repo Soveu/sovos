@@ -15,7 +15,4 @@ elf = { version = "*", path = "../libs/elf" }
 uefi = { version = "*", path = "../libs/uefi" }
 cereal = { version = "*", path = "../libs/cereal" }
 fb = { version = "*", path = "../libs/fb" }
-arrayvec = { version = "0.7.2", default-features = false }
-
-#[patch.crates-io]
-#arrayvec = { git = "https://github.com/saethlin/arrayvec.git", branch = "fix-aliasing" }
+arrayvec = { version = "*", path = "../libs/arrayvec" }

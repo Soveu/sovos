@@ -113,7 +113,7 @@ impl Output {
     unsafe fn test_raw_utf16(&self, s: *const u16) -> Result<(), Error> {
         let f =
             self.test_string.expect("buggy UEFI: simple_text::Output::test_string is null");
-        let result = (f)(self, s);
+        let result = unsafe { (f)(self, s) };
         return result.ok_or_expect_errors(&[Error::Unsupported]);
     }
 
@@ -121,7 +121,7 @@ impl Output {
         let f = self
             .output_string
             .expect("buggy UEFI: simple_text::Output::output_string is null");
-        let result = (f)(self, s);
+        let result = unsafe { (f)(self, s) };
         return result.ok_or_expect_errors(&[Error::Unsupported, Error::DeviceError]);
     }
 

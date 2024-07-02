@@ -239,11 +239,10 @@ impl Edge {
     fn _insert(&mut self, i: usize, new_node: Node, shift: u8) -> InsertionResult {
         // The pointer is not really leaked, the address got encoded in bitmap.
         // Expose the provenance, so we can recover it later.
-        let addr = Unique::expose_addr(&new_node.ptr);
         let node = &mut self.nodes[i];
         debug_assert_eq!(new_node.bitmap.get() & node.bitmap.get(), 0);
         node.bitmap |= new_node.bitmap;
-        mem::forget(new_node.ptr);
+        let addr = Unique::expose_provenance(new_node.ptr);
 
         if node.bitmap.get() != 0xFF {
             return InsertionResult::Done;
@@ -433,7 +432,7 @@ impl Edge {
             let ptr_offset = bit_index << shift;
             let base_addr = Unique::addr(&last.ptr) & mask;
             let ptr = base_addr + ptr_offset;
-            let ptr: *mut Edges = ptr::from_exposed_addr_mut(ptr);
+            let ptr: *mut Edges = ptr::with_exposed_provenance_mut(ptr);
             let ptr = unsafe { Unique::from_raw(ptr) };
             let bitmap = NonZeroU8::new(1 << bit_index).unwrap();
             return RemovalResult { ptr, bitmap, underflow: false };
