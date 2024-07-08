@@ -190,7 +190,7 @@ extern "efiapi" fn efi_main(handle: uefi::ImageHandle, st: *mut uefi::SystemTabl
     post_boot_services(bootinfo);
 }
 
-type FreeMemoryVec = arrayvec::ArrayVec<bootinfo::FreeMemory, 32>;
+type FreeMemoryVec = arrayvec::ArrayVec<bootinfo::FreeMemory>;
 
 // TODO: zero out stuff
 fn post_allocate_page(free_memory: &mut FreeMemoryVec, pages: u64) -> NonNull<u8> {

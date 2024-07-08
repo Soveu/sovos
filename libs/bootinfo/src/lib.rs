@@ -1,6 +1,6 @@
 #![no_std]
 
-use arrayvec::ArrayVec;
+use arrayvec::ArrayVecSized;
 use cpu;
 use uefi;
 use fb;
@@ -16,9 +16,9 @@ pub struct Bootinfo {
     pub buf:           [u64; 1024],
     pub idt:           cpu::interrupt::Table,
     pub gdt:           cpu::segmentation::GlobalDescriptorTable,
-    pub free_memory:   ArrayVec<FreeMemory, 32>,
+    pub free_memory:   ArrayVecSized<FreeMemory, 32>,
 
     pub fb:            fb::Framebuffer,
-    pub uefi_meminfo:  ArrayVec<uefi::memory::Descriptor, 128>,
+    pub uefi_meminfo:  ArrayVecSized<uefi::memory::Descriptor, 128>,
     pub uefi_systable: Option<&'static uefi::SystemTable>,
 }

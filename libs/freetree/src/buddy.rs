@@ -1,7 +1,7 @@
 use core::{fmt, mem, ptr};
 use core::num::NonZeroU8;
 
-use arrayvec::ArrayVec;
+use arrayvec::ArrayVecSized;
 
 use crate::Unique;
 
@@ -62,8 +62,7 @@ impl BuddyLevel {
             },
         };
 
-        let remainder = self.0.nodes.drain(..);
-        new_median.ptr.left.nodes.extend(remainder);
+        new_median.ptr.left.nodes.append(&mut self.0.nodes);
         self.0.nodes.push(new_median);
         return None;
     }
@@ -112,7 +111,7 @@ impl Edges {
 #[derive(Debug)]
 #[repr(align(2048))]
 struct Edge {
-    nodes: ArrayVec<Node, TWO_B>,
+    nodes: ArrayVecSized<Node, TWO_B>,
 }
 
 struct RemovalResult {
@@ -129,7 +128,7 @@ enum InsertionResult {
 
 impl Edge {
     fn new() -> Self {
-        Self { nodes: ArrayVec::new() }
+        Self { nodes: ArrayVecSized::new() }
     }
 
     fn check_size_and_ret(&self, node: Node) -> RemovalResult {
@@ -148,25 +147,25 @@ impl Edge {
             let new_idx = self.nodes.len();
 
             // Move the allocations from child to parent.
-            self.nodes.extend(last.nodes.drain(..));
+            self.nodes.append(&mut last.nodes);
 
             if let Some(x) = self.nodes.get_mut(new_idx) {
                 // The previously leftmost edge is not leftmost anymore, we have
                 // to move the elements from it to its left neighbour.
-                last.nodes.extend(x.ptr.left.nodes.drain(..));
+                last.nodes.append(&mut x.ptr.left.nodes);
             }
         }
     }
 
     unsafe fn _rotate_left(left: *mut Self, parent: *mut Node) {
         let (new_parent, rest) = (*parent).ptr.right.nodes.split_first_mut().unwrap();
-        rest[0].ptr.left.nodes.extend(new_parent.ptr.right.nodes.drain(..));
+        rest[0].ptr.left.nodes.append(&mut new_parent.ptr.right.nodes);
         // SAFETY: we won't alias or invalidate the pointer
-        new_parent.ptr.right.nodes.extend((*parent).ptr.right.nodes.drain(1..));
+        new_parent.ptr.right.nodes.append_range(&mut (*parent).ptr.right.nodes, (1..));
 
         let new_parent = (*parent).ptr.right.nodes.pop().unwrap();
         let mut prev_parent = ptr::replace(parent, new_parent);
-        prev_parent.ptr.right.nodes.extend((*parent).ptr.left.nodes.drain(..));
+        prev_parent.ptr.right.nodes.append(&mut (*parent).ptr.left.nodes);
 
         let prev_parent_left: *mut Self = ptr::addr_of_mut!(prev_parent.ptr.left);
         let p = if prev_parent_left == left { prev_parent_left } else { left };
@@ -174,7 +173,7 @@ impl Edge {
         // SAFETY: yes? miri complained about `left` and `prev_parent_left` aliasing,
         // but it is fixed by the if-else above
         (*p).nodes.push(prev_parent);
-        (*parent).ptr.left.nodes.extend((*prev_parent_left).nodes.drain(..));
+        (*parent).ptr.left.nodes.append(&mut (*prev_parent_left).nodes);
     }
 
     fn try_rotate_left(&mut self, index: usize) -> bool {
@@ -208,9 +207,9 @@ impl Edge {
 
         // This is not necessary for typical scenarios, but is needed if parent index ==
         // 0, so it has both left and right edge
-        (*parent).ptr.left.nodes.extend(old_parent.ptr.left.nodes.drain(..));
+        (*parent).ptr.left.nodes.append(&mut old_parent.ptr.left.nodes);
 
-        old_parent.ptr.left.nodes.extend((*parent).ptr.right.nodes.drain(..));
+        old_parent.ptr.left.nodes.append(&mut (*parent).ptr.right.nodes);
         (*parent).ptr.right.push_and_flatten(old_parent);
     }
 
@@ -282,14 +281,14 @@ impl Edge {
         let dst = &mut self.nodes[index];
         debug_assert!(src.ptr.right.nodes.is_empty());
         debug_assert!(src.ptr.left.nodes.is_empty());
-        src.ptr.right.nodes.extend(dst.ptr.right.nodes.drain(..));
-        src.ptr.left.nodes.extend(dst.ptr.left.nodes.drain(..));
+        src.ptr.right.nodes.append(&mut dst.ptr.right.nodes);
+        src.ptr.left.nodes.append(&mut dst.ptr.left.nodes);
         return mem::replace(dst, src);
     }
 
     fn try_raw_insert(&mut self, index: usize, node: Node) -> Result<(), Node> {
         if let Err(err) = self.nodes.try_insert(index, node) {
-            return Err(err.element());
+            return Err(err.item);
         }
         if index == 0 {
             let [first, second] = match self.nodes.as_mut_slice() {
@@ -297,7 +296,7 @@ impl Edge {
                 _ => unreachable!("nodes must have at least two elements in them"),
             };
             debug_assert!(first.ptr.left.nodes.len() == 0);
-            first.ptr.left.nodes.extend(second.ptr.left.nodes.drain(..));
+            first.ptr.left.nodes.append(&mut second.ptr.left.nodes);
         }
         return Ok(());
     }
@@ -307,8 +306,8 @@ impl Edge {
 
         if index == B {
             // New node is the median
-            self.nodes[B].ptr.left.nodes.extend(new_node.ptr.right.nodes.drain(..));
-            new_node.ptr.right.nodes.extend(self.nodes.drain(B..));
+            self.nodes[B].ptr.left.nodes.append(&mut new_node.ptr.right.nodes);
+            new_node.ptr.right.nodes.append_range(&mut self.nodes, (B..));
             return new_node;
         }
 
@@ -327,8 +326,8 @@ impl Edge {
                 .ptr
                 .left
                 .nodes
-                .extend(new_median.nodes.drain(..));
-            new_median.nodes.extend(self.nodes.drain(median_index + 1..));
+                .append(&mut new_median.nodes);
+            new_median.nodes.append_range(&mut self.nodes, (median_index + 1..));
         }
 
         let mut new_median = self.nodes.pop().unwrap();
@@ -413,7 +412,7 @@ impl Edge {
             None => &mut self.nodes[0].ptr.left,
         };
 
-        to_append.nodes.extend(removed_parent.ptr.left.nodes.drain(..));
+        to_append.nodes.append(&mut removed_parent.ptr.left.nodes);
         to_append.push_and_flatten(removed_parent);
         return self.check_size_and_ret(to_return);
     }

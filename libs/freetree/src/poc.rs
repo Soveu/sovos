@@ -1,6 +1,6 @@
 use core::{fmt, mem, ptr};
 
-use arrayvec::ArrayVec;
+use arrayvec::ArrayVecSized;
 
 use crate::Unique;
 
@@ -61,8 +61,7 @@ impl Root {
             InsertionResult::Overflow(e) => e,
         };
 
-        let remainder = root.edges.drain(..);
-        new_median.left.edges.extend(remainder);
+        new_median.left.edges.append(&mut root.edges);
         root.edges.push(new_median);
     }
 
@@ -182,7 +181,7 @@ impl Node {
 /// should be used instead.
 #[repr(align(2048))]
 struct NodeInner {
-    edges: ArrayVec<Edge, TWO_B>,
+    edges: ArrayVecSized<Edge, TWO_B>,
 }
 
 enum InsertionResult {
@@ -219,7 +218,7 @@ impl Into<Option<Edge>> for RemovalResult {
 impl NodeInner {
     /// Constructs an empty InnerNode
     fn new() -> Self {
-        Self { edges: ArrayVec::new() }
+        Self { edges: ArrayVecSized::new() }
     }
 
     /// Checks if the invariants are being upheld
@@ -287,8 +286,8 @@ impl NodeInner {
 
         if index == B {
             // New edge is the median
-            self.edges[B].left.edges.extend(new_edge.right.edges.drain(..));
-            new_edge.right.edges.extend(self.edges.drain(B..));
+            self.edges[B].left.edges.append(&mut new_edge.right.edges);
+            new_edge.right.edges.append_range(&mut self.edges, (B..));
             return new_edge;
         }
 
@@ -303,8 +302,8 @@ impl NodeInner {
         unsafe {
             let new_median: *mut Self = &mut self.edges[median_index].right;
             let new_median = &mut *new_median;
-            self.edges[median_index + 1].left.edges.extend(new_median.edges.drain(..));
-            new_median.edges.extend(self.edges.drain(median_index + 1..));
+            self.edges[median_index + 1].left.edges.append(&mut new_median.edges);
+            new_median.edges.append_range(&mut self.edges, (median_index + 1..));
         }
 
         let mut new_median = self.edges.pop().unwrap();
@@ -323,7 +322,7 @@ impl NodeInner {
     /// if it is inserted as the leftmost element (index=0).
     fn try_raw_insert(&mut self, index: usize, edge: Edge) -> Result<(), Edge> {
         if let Err(err) = self.edges.try_insert(index, edge) {
-            return Err(err.element());
+            return Err(err.item);
         }
         if index == 0 {
             let [first, second] = match self.edges.as_mut_slice() {
@@ -331,7 +330,7 @@ impl NodeInner {
                 _ => unreachable!("nodes must have at least two elements in them"),
             };
             debug_assert!(first.left.edges.len() == 0);
-            first.left.edges.extend(second.left.edges.drain(..));
+            first.left.edges.append(&mut second.left.edges);
         }
         return Ok(());
     }
@@ -405,12 +404,12 @@ impl NodeInner {
             let new_idx = self.edges.len();
 
             // Move the allocations from child to parent.
-            self.edges.extend(last.edges.drain(..));
+            self.edges.append(&mut last.edges);
 
             if let Some(x) = self.edges.get_mut(new_idx) {
                 // The previously leftmost edge is not leftmost anymore, we have
                 // to move the elements from it to its left neighbour.
-                last.edges.extend(x.left.edges.drain(..));
+                last.edges.append(&mut x.left.edges);
             }
         }
     }
@@ -420,8 +419,8 @@ impl NodeInner {
         let dst = &mut self.edges[index];
         debug_assert!(src.right.edges.is_empty());
         debug_assert!(src.left.edges.is_empty());
-        src.right.edges.extend(dst.right.edges.drain(..));
-        src.left.edges.extend(dst.left.edges.drain(..));
+        src.right.edges.append(&mut dst.right.edges);
+        src.left.edges.append(&mut dst.left.edges);
         return mem::replace(dst, src);
     }
 
@@ -452,13 +451,13 @@ impl NodeInner {
     ///   `left_neighbour_of_parent.right`
     unsafe fn _rotate_left(left: *mut Self, parent: *mut Edge) {
         let (new_parent, rest) = (*parent).right.edges.split_first_mut().unwrap();
-        rest[0].left.edges.extend(new_parent.right.edges.drain(..));
+        rest[0].left.edges.append(&mut new_parent.right.edges);
         // SAFETY: we won't alias or invalidate the pointer
-        new_parent.right.edges.extend((*parent).right.edges.drain(1..));
+        new_parent.right.edges.append_range(&mut (*parent).right.edges, (1..));
 
         let new_parent = (*parent).right.edges.pop().unwrap();
         let mut prev_parent = ptr::replace(parent, new_parent);
-        prev_parent.right.edges.extend((*parent).left.edges.drain(..));
+        prev_parent.right.edges.append(&mut (*parent).left.edges);
 
         let prev_parent_left: *mut Self = ptr::addr_of_mut!(prev_parent.left);
         let p = if prev_parent_left == left { prev_parent_left } else { left };
@@ -466,7 +465,7 @@ impl NodeInner {
         // SAFETY: yes? miri complained about `left` and `prev_parent_left` aliasing,
         // but it is fixed by the if-else above
         (*p).edges.push(prev_parent);
-        (*parent).left.edges.extend((*prev_parent_left).edges.drain(..));
+        (*parent).left.edges.append(&mut (*prev_parent_left).edges);
     }
 
     /// Tries to rebalance the tree by rotating the element
@@ -510,9 +509,9 @@ impl NodeInner {
 
         // This is not necessary for typical scenarios, but is needed if parent index ==
         // 0, so it has both left and right edge
-        (*parent).left.edges.extend(old_parent.left.edges.drain(..));
+        (*parent).left.edges.append(&mut old_parent.left.edges);
 
-        old_parent.left.edges.extend((*parent).right.edges.drain(..));
+        old_parent.left.edges.append(&mut (*parent).right.edges);
         (*parent).right.push_and_flatten(old_parent);
     }
 
@@ -570,7 +569,7 @@ impl NodeInner {
             None => &mut self.edges[0].left,
         };
 
-        to_append.edges.extend(removed_parent.left.edges.drain(..));
+        to_append.edges.append(&mut removed_parent.left.edges);
         to_append.push_and_flatten(removed_parent);
         return self.check_size_and_ret(to_return);
     }
