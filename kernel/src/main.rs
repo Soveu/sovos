@@ -20,11 +20,11 @@ pub unsafe extern "sysv64" fn _start() -> ! {
     asm!("
         # Check if there is an additional value from the interrupt
         test sp, 15
-        jnz 1f
+        jnz 4f
 
         pop rax
 
-    1:
+    4:
         # Pop the old ip
         pop rax
 

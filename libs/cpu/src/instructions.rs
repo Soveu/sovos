@@ -44,11 +44,12 @@ pub fn get_ip() -> usize {
 #[inline(always)]
 pub unsafe fn bsf(mut x: u64) -> u8 {
     unsafe {
-        asm!(
-            "bsf {0}, {0}",
-            "jnz 1f",
-            "mov al, 64",
-            "1:",
+        asm!("
+            bsf {0}, {0}
+            jnz 4f
+            mov al, 64
+        4:
+            ",
             inout(reg) x,
         );
     }
