@@ -42,6 +42,7 @@ name = "elf"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "impl_bits",
 ]
 
 [[package]]

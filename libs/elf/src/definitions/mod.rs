@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use core::num::NonZeroU64;
+pub mod dynamic;
 
+use core::num::NonZeroU64;
 use bytemuck::{Pod, Zeroable};
 
 pub const MAGIC: [u8; 4] = *b"\x7FELF";
