@@ -41,7 +41,7 @@ pub struct SystemTable {
     /// A pointer to the EFI Runtime Services Table. See Section 4.5.
     pub runtime_services: *const RuntimeServices,
     /// A pointer to the EFI Boot Services Table. See Section 4.4.
-    pub boot_services:    Option<NonNull<BootServices>>,
+    _boot_services:    Option<NonNull<BootServices>>,
 
     /// The number of system configuration tables in the buffer
     /// ConfigurationTable.
@@ -72,6 +72,12 @@ impl SystemTable {
         unsafe { &*core::ptr::slice_from_raw_parts(self.config_table, sz) }
     }
 
+    // This is a method, so that the lifetime of BootServices will get
+    // bound to SystemTable, forbidding accidental usage after exit_boot_services.
+    pub fn boot_services(&mut self) -> Option<&mut BootServices> {
+        self._boot_services.map(|mut p| unsafe { p.as_mut() })
+    }
+
     /// Terminates boot services.
     /// On success, loader owns all avaliable memory in the system.
     /// Additionally, all memory marked as `memory::Type::BootServicesCode` or
@@ -84,15 +90,13 @@ impl SystemTable {
         handle: ImageHandle,
         key: memory::MapKey,
     ) -> Result<(), Error> {
-        let bservices = self.boot_services.expect("boot services are null");
+        let bservices = self.boot_services().expect("boot services are null");
 
         /* SAFETY: we won't call exit_boot_services twice, because we zero out
          * the pointers */
-        unsafe {
-            bservices.as_ref().exit_boot_services(handle, key)?;
-        }
+        unsafe { bservices.exit_boot_services(handle, key)?; }
 
-        self.boot_services = None;
+        self._boot_services = None;
         self.con_in = 0;
         self.con_out = None;
         self.con_err = None;

@@ -18,6 +18,10 @@ static mut MUT: [u8; 11] = *b"This is MUT";
 #[naked]
 pub unsafe extern "sysv64" fn _start() -> ! {
     asm!("
+    42:
+        hlt
+        jmp 42b
+
         # Check if there is an additional value from the interrupt
         test sp, 15
         jnz 4f

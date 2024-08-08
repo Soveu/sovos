@@ -89,8 +89,8 @@
       "-zcombreloc",
       "-znognustack",
       "-ztext",
-      "-zcommon-page-size=2097152",
-      "-zmax-page-size=2097152",
+      "-zcommon-page-size=4096",
+      "-zmax-page-size=4096",
 
       "-zrelro",
       "-znoexecstack"

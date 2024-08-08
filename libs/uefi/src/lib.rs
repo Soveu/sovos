@@ -65,3 +65,7 @@ impl core::fmt::Display for Revision {
         core::fmt::Debug::fmt(&self.as_tuple(), f)
     }
 }
+
+pub trait Protocol {
+    const GUID: Guid;
+}

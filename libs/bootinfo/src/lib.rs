@@ -4,6 +4,7 @@ use arrayvec::ArrayVecSized;
 use cpu;
 use uefi;
 use fb;
+use core::num::NonZeroU64;
 
 #[repr(C)]
 pub struct FreeMemory {
@@ -17,6 +18,8 @@ pub struct Bootinfo {
     pub idt:           cpu::interrupt::Table,
     pub gdt:           cpu::segmentation::GlobalDescriptorTable,
     pub free_memory:   ArrayVecSized<FreeMemory, 32>,
+
+    pub free_memory_at_null: Option<NonZeroU64>,
 
     pub fb:            fb::Framebuffer,
     pub uefi_meminfo:  ArrayVecSized<uefi::memory::Descriptor, 128>,

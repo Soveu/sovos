@@ -151,10 +151,14 @@ pub struct GraphicsOutput {
 
     /// Pointer to EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE data. Type
     /// EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE is defined in “Related Definitions” below.
-    pub mode: *const Mode,
+    _mode: *const Mode,
 }
 
 impl GraphicsOutput {
+    pub fn mode(&self) -> &Mode {
+        unsafe { &*self._mode }
+    }
+
     pub fn query_mode(&self, mode_number: u32) -> Result<&ModeInformation, Error> {
         const ERRORS: &[Error] = &[Error::DeviceError, Error::InvalidParameter];
 
@@ -304,4 +308,8 @@ pub struct Mode {
     /// Amount of frame buffer needed to support the active mode as defined by
     /// PixelsPerScanLine x VerticalResolution x PixelElementSize.
     pub framebuffer_size: usize,
+}
+
+impl crate::Protocol for GraphicsOutput {
+    const GUID: Guid = guid::Guid::EFI_GRAPHICS_OUTPUT_PROTOCOL;
 }

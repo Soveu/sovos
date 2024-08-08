@@ -253,15 +253,29 @@ impl BootServices {
             .ok_or_expect_errors(&[Error::InvalidParameter]);
     }
 
-    pub fn locate_protocol(&self, protocol: Guid) -> Result<Option<NonNull<()>>, Error> {
+    pub fn locate_protocol_raw(&self, protocol: Guid) -> Result<NonNull<()>, Error> {
         let locate_prot = self
             .locate_protocol
             .expect("buggy UEFI: BootServices::locate_protocol is null");
         let mut ret = None;
         let _ = (locate_prot)(&protocol, None, &mut ret)
             .ok_or_expect_errors(&[Error::InvalidParameter, Error::NotFound])?;
+        let ret = ret.expect("got nullptr from locate_protocol");
         return Ok(ret);
     }
+
+    pub fn locate_protocol<P: crate::Protocol>(&self) -> Result<&P, Error> {
+        self
+            .locate_protocol_raw(P::GUID)
+            .map(|p| unsafe { p.cast::<P>().as_ref() })
+    }
+
+    pub fn locate_protocol_mut<P: crate::Protocol>(&mut self) -> Result<&mut P, Error> {
+        self
+            .locate_protocol_raw(P::GUID)
+            .map(|p| unsafe { p.cast::<P>().as_mut() })
+    }
+
 }
 
 impl Verify for BootServices {
