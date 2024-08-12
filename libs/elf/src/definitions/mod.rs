@@ -210,6 +210,7 @@ impl ProgramHeader {
 }
 
 impl ProgramHeaderFlags {
+    #[allow(clippy::identity_op)]
     pub fn is_executable(&self) -> bool {
         (self.0 >> 0) & 1 == 1
     }

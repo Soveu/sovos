@@ -5,7 +5,6 @@ use core::mem;
 use core::num::NonZeroU64;
 
 pub use definitions::*;
-use bytemuck;
 
 pub struct Elf<'a, M: ElfMachine> {
     pub data: &'a [u8],
