@@ -258,7 +258,7 @@ impl BootServices {
             .locate_protocol
             .expect("buggy UEFI: BootServices::locate_protocol is null");
         let mut ret = None;
-        let _ = (locate_prot)(&protocol, None, &mut ret)
+        (locate_prot)(&protocol, None, &mut ret)
             .ok_or_expect_errors(&[Error::InvalidParameter, Error::NotFound])?;
         let ret = ret.expect("got nullptr from locate_protocol");
         return Ok(ret);

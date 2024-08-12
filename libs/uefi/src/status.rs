@@ -19,13 +19,13 @@ impl RawStatus {
         if (EFI_ERROR_BEGIN..=EFI_ERROR_END).contains(&self.0) {
             let error_code = self.0 - EFI_ERROR_BEGIN + Error::LoadError as usize;
             /* SAFETY: we have just checked if the enum is in range */
-            return unsafe { Err(core::mem::transmute(error_code as u8)) };
+            return unsafe { Err(core::mem::transmute::<u8, Error>(error_code as u8)) };
         }
 
         if (EFI_WARN_BEGIN..=EFI_WARN_END).contains(&self.0) {
             let warn_code = self.0 - EFI_WARN_BEGIN + Warning::UnknownGlyph as usize;
             /* SAFETY: we have just checked if the enum is in range */
-            return unsafe { Ok(Some(core::mem::transmute(warn_code as u8))) };
+            return unsafe { Ok(Some(core::mem::transmute::<u8, Warning>(warn_code as u8))) };
         }
 
         panic!("Invalid UEFI status {:x}", self.0);
@@ -60,7 +60,7 @@ impl RawStatus {
     }
 
     pub const fn from_error(e: Error) -> Self {
-        Self(0x8000_0000_0000_000 + e as usize)
+        Self(0x8000_0000_0000_0000 + e as usize)
     }
 
     pub const fn is_ok(self) -> bool {
