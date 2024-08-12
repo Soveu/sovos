@@ -5,7 +5,7 @@ fn test_unsize_deref() {
     let mut sized = ArrayVecSized::<u32, 4>::new();
     sized.push(42);
     let un_sized: &ArrayVec<u32> = &sized;
-    let slice: &[u32] = &un_sized;
+    let slice: &[u32] = un_sized;
     assert_eq!(sized.len(), 1);
     assert_eq!(un_sized.len(), 1);
     assert_eq!(slice, &[42]);

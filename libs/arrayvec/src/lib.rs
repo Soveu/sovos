@@ -68,6 +68,12 @@ impl<T: core::fmt::Debug, const N: usize> core::fmt::Debug for ArrayVecSized<T, 
     }
 }
 
+impl<T, const N: usize> Default for ArrayVecSized<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[repr(transparent)]
 pub struct ArrayVec<T> {
     inner: Inner<[MaybeUninit<T>]>,
@@ -263,7 +269,7 @@ pub struct CapacityError<T> {
     pub item: T,
 }
 
-const CAPACITY_ERROR: &'static str = "not enough capacity";
+const CAPACITY_ERROR: &str = "not enough capacity";
 impl<T> core::fmt::Debug for CapacityError<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(CAPACITY_ERROR)
