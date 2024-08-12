@@ -13,3 +13,6 @@ arrayvec = { path = "../arrayvec", version = "*" }
 cpu = { path = "../cpu", version = "*" }
 uefi = { path = "../uefi", version = "*" }
 fb = { path = "../fb", version = "*" }
+
+[lints]
+workspace = true

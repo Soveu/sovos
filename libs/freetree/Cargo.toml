@@ -9,3 +9,6 @@ edition = "2021"
 
 [dependencies]
 arrayvec = { path = "../arrayvec", version = "*" }
+
+[lints]
+workspace = true

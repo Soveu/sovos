@@ -12,3 +12,5 @@ edition = "2024"
 bytemuck = "*"
 impl_bits = { version = "0.1", path = "../impl_bits" }
 
+[lints]
+workspace = true

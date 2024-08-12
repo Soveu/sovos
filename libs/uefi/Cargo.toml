@@ -10,3 +10,6 @@ edition = "2024"
 
 [dependencies]
 impl_bits = { version = "0.1", path = "../impl_bits" }
+
+[lints]
+workspace = true
