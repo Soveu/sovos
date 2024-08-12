@@ -80,7 +80,7 @@ impl Framebuffer {
             self.cursor_y as usize * FONT_Y * self.scanline_width * COLORS_BYTES;
         let fb_line_len = FONT_Y * self.scanline_width * COLORS_BYTES;
         unsafe {
-            let p = self.base.add(fb_line_base as usize);
+            let p = self.base.add(fb_line_base);
             core::intrinsics::volatile_set_memory(p, 0u8, fb_line_len);
         }
     }
