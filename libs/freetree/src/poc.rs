@@ -206,9 +206,9 @@ enum RemovalResult {
     Underflow(Edge),
 }
 
-impl Into<Option<Edge>> for RemovalResult {
-    fn into(self) -> Option<Edge> {
-        match self {
+impl From<RemovalResult> for Option<Edge> {
+    fn from(val: RemovalResult) -> Self {
+        match val {
             RemovalResult::NotFound => None,
             RemovalResult::Done(e) | RemovalResult::Underflow(e) => Some(e),
         }

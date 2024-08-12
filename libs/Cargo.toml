@@ -20,9 +20,13 @@ debug = true
 [workspace.lints.clippy]
 # Just not always my cup of tea
 needless_return = "allow"
+let_unit_value = "allow"
 
 # There is a lot of `x >> 0` usage that I don't want to really get rid of.
 identity_op = "allow"
 
 # FIXME
 doc_lazy_continuation = "allow"
+
+# We don't quite need Default for everything
+new_without_default = "allow"

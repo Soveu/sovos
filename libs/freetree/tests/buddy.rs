@@ -109,7 +109,6 @@ fn test_buddy() {
 
     let now = Instant::now();
     let mut allocs_back: Vec<usize> = (0..n)
-        .into_iter()
         .map(|_| buddy.pop(0))
         .map(Option::unwrap)
         .map(ManuallyDrop::new)

@@ -23,9 +23,8 @@ impl Buddy {
     }
 
     pub fn insert(&mut self, node: Node, level: usize) {
-        match self.levels[level].insert(node, level as u8) {
-            Some(big) => self.insert(big, level + 1),
-            None => (),
+        if let Some(big) = self.levels[level].insert(node, level as u8) {
+            self.insert(big, level + 1)
         }
     }
 
@@ -68,12 +67,10 @@ impl BuddyLevel {
     }
 
     pub fn pop_last(&mut self, shift: u8) -> Option<Node> {
-        match self.0.pop_last(shift * 3 + 12) {
-            None => None,
-            Some(RemovalResult { ptr, bitmap, underflow: _ }) => {
-                Some(Node { ptr, bitmap })
-            },
-        }
+        self
+            .0
+            .pop_last(shift * 3 + 12)
+            .map(|RemovalResult { ptr, bitmap, .. }| Node { ptr, bitmap })
     }
 }
 

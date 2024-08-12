@@ -24,7 +24,7 @@ fn test_insertion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
     let mut allocations: Vec<_> =
-        (0..TEST_ALLOCATIONS).into_iter().map(|_| new_edge()).collect();
+        (0..TEST_ALLOCATIONS).map(|_| new_edge()).collect();
     let allocation_addresses: Vec<_> = allocations.iter().map(Unique::addr).collect();
 
     for i in 0..allocations.len() {
@@ -64,7 +64,7 @@ fn test_insertion() {
     #[cfg(not(miri))]
     println!(" {:?}", now.elapsed());
 
-    assert!(root.contains(0) == false);
+    assert!(!root.contains(0));
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn test_deletion() {
     let mut root = ManuallyDrop::new(Root::new());
     let mut seed = 0xDEADBEEF;
     let mut allocations: Vec<_> =
-        (0..TEST_ALLOCATIONS).into_iter().map(|_| new_edge()).collect();
+        (0..TEST_ALLOCATIONS).map(|_| new_edge()).collect();
     let mut allocation_addresses: Vec<_> = allocations.iter().map(Unique::addr).collect();
 
     for i in 0..allocations.len() {
