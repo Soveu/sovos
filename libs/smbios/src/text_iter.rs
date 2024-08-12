@@ -22,7 +22,7 @@ impl<'a> Iterator for TextIterator<'a> {
         let (text, rest) =
             unsafe { (self.slice.get_unchecked(..n), self.slice.get_unchecked(n + 1..)) };
 
-        if text.len() == 0 {
+        if text.is_empty() {
             return None;
         }
 

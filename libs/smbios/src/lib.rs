@@ -77,7 +77,7 @@ pub enum HeaderType {
 impl HeaderType {
     pub fn from_u8(x: u8) -> Option<Self> {
         let x = match x {
-            0..=44 => unsafe { core::mem::transmute(x) },
+            0..=44 => unsafe { core::mem::transmute::<u8, HeaderType>(x) },
             126 => Self::Inactive,
             127 => Self::EndOfTable,
             _ => return None,
