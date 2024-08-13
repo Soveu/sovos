@@ -1,7 +1,6 @@
 use crate::*;
 
 #[repr(C)]
-#[allow(dead_code)] // https://github.com/rust-lang/rust/issues/126169
 pub struct GraphicsOutput {
     /// ## Parameters
     /// * This - The EFI_GRAPHICS_OUTPUT_PROTOCOL instance.

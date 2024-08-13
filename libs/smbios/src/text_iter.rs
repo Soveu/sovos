@@ -18,10 +18,7 @@ impl<'a> Iterator for TextIterator<'a> {
             .position(|&x| x == 0)
             .expect("smbios::TextIterator - can't find null terminator");
 
-        /* SAFETY: n must be in range [0, slice.len()) */
-        let (text, rest) =
-            unsafe { (self.slice.get_unchecked(..n), self.slice.get_unchecked(n + 1..)) };
-
+        let (text, rest) = self.slice.split_at(n);
         if text.is_empty() {
             return None;
         }

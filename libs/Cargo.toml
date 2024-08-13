@@ -4,7 +4,6 @@ members = [
   "arrayvec",
   "bootinfo",
   "cpu",
-  "mailbox",
   "elf",
   "uefi",
   "impl_bits",

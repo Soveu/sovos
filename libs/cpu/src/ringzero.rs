@@ -19,21 +19,6 @@ pub fn halt() {
     }
 }
 
-/*
-/// The load segment-limit (LSL) instruction uses a segment-selector in the
-/// source operand to reference a descriptor in the GDT or LDT.
-/// LSL performs a set of preliminary access-right checks and, if successful,
-/// loads the segment-descriptor limit field into the destination register.
-/// Software can use the limit value in comparisons with pointer offsets to prevent
-/// segment limit violations.
-#[inline(always)]
-pub fn load_segment_limit() {
-    unsafe {
-        asm!("lsl", options(nostack, nomem));
-    }
-}
-*/
-
 #[inline(always)]
 pub fn disable_interrupts() {
     unsafe {
@@ -59,102 +44,6 @@ pub fn set_global_interrupt_flag() {
 pub fn clear_global_interrupt_flag() {
     unsafe {
         asm!("clgi", options(nostack, nomem));
-    }
-}
-
-#[inline(always)]
-pub fn clts() {
-    unsafe {
-        asm!("clts", options(nostack, nomem));
-    }
-}
-
-/*
-#[inline(always)]
-pub fn load_access_rights_byte() {
-    unsafe {
-        asm!("lar", options(nostack, nomem));
-    }
-}
-*/
-
-/// Safety:  Unlike the WBINVD instruction, no modified cache lines are
-/// written to memory. The INVD instruction should only be used in
-/// situations where memory coherency is not required.
-#[inline(always)]
-pub unsafe fn invd() {
-    asm!("invd", options(nostack, nomem));
-}
-
-/// The writeback and invalidate (WBINVD) and writeback no invalidate (WBNOINVD)
-/// instructions are used to write all modified cache lines to memory so that
-/// memory contains the most recent copy of data. After the writes are complete,
-/// the WBINVD instruction invalidates all cache lines, whereas the WBNOINVD
-/// instruction may leave the lines in the cache hierarchy in a non-modified
-/// state. These instructions operate on all caches in the memory hierarchy,
-/// including caches that are external to the processor. See the instructions'
-/// description in Volume 3 for further operational details
-#[inline(always)]
-pub fn wbinvd() {
-    unsafe {
-        asm!("wbinvd", options(nostack, nomem));
-    }
-}
-
-/// See [`wbinvd`]
-#[inline(always)]
-pub fn wbnoinvd() {
-    unsafe {
-        asm!("wbnoinvd", options(nostack, nomem));
-    }
-}
-
-#[inline(always)]
-pub fn incssp() {
-    unsafe {
-        asm!("incssp", options(nostack, nomem));
-    }
-}
-
-/// The invalidate TLB entry (INVLPG) instruction can be used to invalidate
-/// specific entries within the TLB. The source operand is a virtual-memory
-/// address that specifies the TLB entry to be invalidated. Invalidating a TLB
-/// entry does not remove the associated page-table entry from the data cache.
-/// See “Translation-Lookaside Buffer (TLB)” on page 147 for more information.
-#[inline(always)]
-pub fn invlpg() {
-    unsafe {
-        asm!("invlpg", options(nostack, nomem));
-    }
-}
-
-/// The invalidate TLB entry in a Specified ASID instruction (INVLPGA) can be
-/// used to invalidate TLB entries associated with the specified ASID. See
-/// "Invalidate Page, Alternate ASID" on page 498
-#[inline(always)]
-pub fn invlpga() {
-    unsafe {
-        asm!("invlpga", options(nostack, nomem));
-    }
-}
-
-/// The invalidate TLB with Broadcast instruction (INVLPGB) can be used to
-/// invalidate a specified range of TLB entries on the local processor and
-/// broadcast the invalidation to remote processors. See "INVLPGB" in Volume 3
-#[inline(always)]
-pub fn invlpgb() {
-    unsafe {
-        asm!("invlpgb", options(nostack, nomem));
-    }
-}
-
-/// The invalidate TLB entries in Specified PCID instruction (INVPCID) can be
-/// used to invalidate TLB entries of the specified Processor Context ID. See
-/// “INVPCID” in Volume 3.
-#[inline(always)]
-pub fn invlpcid() {
-    unsafe {
-        asm!("invlpcid", options(nostack, nomem));
     }
 }
 

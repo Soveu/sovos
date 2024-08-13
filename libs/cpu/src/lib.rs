@@ -13,12 +13,8 @@
 
 use impl_bits::impl_bits;
 
-#[macro_use]
-mod macros;
-
 pub mod acpi;
 pub mod interrupt;
-pub mod paging;
 pub mod segmentation;
 pub mod port;
 
