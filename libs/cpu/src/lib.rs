@@ -1,10 +1,9 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
-#![feature(asm_const)]
-#![feature(const_slice_from_raw_parts_mut)]
-#![feature(const_mut_refs)]
 #![feature(decl_macro)]
 #![feature(naked_functions)]
+#![feature(strict_provenance)]
+#![feature(exposed_provenance)]
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
 
@@ -17,6 +16,7 @@ pub mod acpi;
 pub mod interrupt;
 pub mod segmentation;
 pub mod port;
+pub mod paging;
 
 mod instructions;
 pub use instructions::*;

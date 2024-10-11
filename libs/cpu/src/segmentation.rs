@@ -1,6 +1,6 @@
 //use core::convert::TryInto;
 use core::ptr;
-use core::arch::asm;
+use core::arch::{naked_asm, asm};
 
 pub enum TableIndicator {
     GDT = 0,
@@ -100,7 +100,7 @@ impl Gdtr {
 
     #[naked]
     pub unsafe extern "sysv64" fn apply(&self) {
-        asm!("
+        naked_asm!("
             lgdt [rdi]
 
             mov ax, {}
@@ -121,7 +121,6 @@ impl Gdtr {
             const DATA_DESCRIPTOR_OFFSET,
             const NULL_DESCRIPTOR_OFFSET,
             const CODE_DESCRIPTOR_OFFSET,
-            options(noreturn),
         )
     }
 }
