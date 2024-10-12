@@ -9,6 +9,7 @@ edition = "2021"
 
 [dependencies]
 arrayvec = { path = "../arrayvec", version = "*" }
+misc = { path = "../misc", version = "*" }
 
 [lints]
 workspace = true

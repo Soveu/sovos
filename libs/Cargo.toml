@@ -11,6 +11,7 @@ members = [
   "freetree",
   "cereal",
   "fb",
+  "misc",
 ]
 
 [profile.release]

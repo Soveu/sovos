@@ -1,3 +1,4 @@
+pub use misc::unique::Unique;
 use impl_bits::impl_bits;
 
 /// Number of the first bits that not going through virtual address translation.
@@ -69,13 +70,12 @@ impl TableEntry {
         Self(0)
     }
 
-    // TODO: use Unique to remove unsafe
-    pub unsafe fn with_ptr_and_flags(p: *mut Table, flags: PagingFlags) -> Self {
-        assert_eq!(p.is_null(), flags.present());
-        Self(p.expose_provenance() | flags.0)
+    pub fn with_ptr_and_flags(p: Unique<Table>, flags: PagingFlags) -> Self {
+        assert!(flags.present());
+        Self(Unique::expose_provenance(p) | flags.0)
     }
 
-    pub fn with_phys_ptr_and_flags(p: usize, flags: PagingFlags) -> Self {
+    pub unsafe fn with_phys_ptr_and_flags(p: usize, flags: PagingFlags) -> Self {
         Self(p | flags.0)
     }
 
@@ -137,15 +137,13 @@ impl TableEntry {
         };
 
         if table[idx].is_null() {
-            let p = alloc.allocate_phys_page().cast::<Table>();
-
-            if p.is_null() {
+            let Some(mut p) = alloc.allocate_phys_page() else {
                 return PageMappingResult::PhysMemoryExhausted;
-            }
+            };
 
             unsafe { (*p).fill_with(Self::zeroed); }
             let pflags = PagingFlags(0).set_present().set_writable();
-            table[idx] = unsafe { Self::with_ptr_and_flags(p, pflags) };
+            table[idx] = Self::with_ptr_and_flags(p, pflags);
         }
     
         return table[idx].map_kilopage(virt, new_entry, alloc, lower_level);
@@ -157,9 +155,8 @@ pub struct Root(pub TableEntry);
 
 impl Root {
     pub fn new(a: &mut dyn PhysPageAllocator) -> Self {
-        let p = a.allocate_phys_page();
-        assert!(!p.is_null());
-        Self(TableEntry(p.expose_provenance()))
+        let p = a.allocate_phys_page().unwrap();
+        Self(TableEntry(Unique::expose_provenance(p)))
     }
 
     pub fn map_kilopage(
@@ -185,7 +182,7 @@ pub enum PageMappingResult {
 }
 
 pub trait PhysPageAllocator {
-    fn allocate_phys_page(&mut self) -> *mut Table; // Option<Unique> ?
+    fn allocate_phys_page(&mut self) -> Option<Unique<Table>>;
 
     // fn free_phys_page(&mut self, p: NonNull<Table>) {
     //     unimplemented!()

@@ -91,7 +91,6 @@
 //! This does waste half of the memory, but remember, this is re-used,
 //! deallocated memory. A freelist would use only `size_of::<*mut u8>()` bytes!
 
-mod unique;
-pub use unique::Unique;
+pub use misc::unique::Unique;
 pub mod buddy;
 pub mod poc;

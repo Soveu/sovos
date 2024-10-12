@@ -10,6 +10,7 @@ edition = "2021"
 
 [dependencies]
 impl_bits = { version = "0.1", path = "../impl_bits" }
+misc = { version = "0.1", path = "../misc" }
 
 [features]
 default = []
