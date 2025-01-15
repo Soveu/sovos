@@ -1,5 +1,6 @@
 pub use misc::unique::Unique;
 use impl_bits::impl_bits;
+use core::sync::atomic::{Ordering, AtomicUsize};
 
 /// Number of the first bits that not going through virtual address translation.
 pub const PHYS_BITS: u8 = 12;
@@ -20,6 +21,21 @@ const PROP_MASK: usize = !VIRT_MASK;
 pub const TOTAL_BITS: u8 = VIRT_BITS + PHYS_BITS;
 pub const LOWER_HALF_END: usize = (1 << (TOTAL_BITS - 1)) - 1;
 pub const HIGHER_HALF_START: usize = !((1 << TOTAL_BITS) - 1);
+
+pub trait PhysToVirtTranslator {
+    fn translate(phys: usize) -> usize;
+}
+
+pub struct HigherHalf;
+impl PhysToVirtTranslator for HigherHalf {
+    fn translate(phys: usize) -> usize { phys + HIGHER_HALF_START }
+}
+
+static BOOTSTRAP_PHYS_OFFSET: AtomicUsize = AtomicUsize::new(0);
+pub struct Bootstrap;
+impl PhysToVirtTranslator for Bootstrap {
+    fn translate(phys: usize) -> usize { phys + BOOTSTRAP_PHYS_OFFSET.load(Ordering::Relaxed) }
+}
 
 fn mask_ptr(p: usize) -> usize {
     p & VIRT_MASK
@@ -99,7 +115,7 @@ impl TableEntry {
         return unsafe { Some(&*addr) };
     }
 
-    // TODO: phys to virt
+    // TODO: phys to virt - currently we assume linear space
     pub fn get_mut(&mut self) -> Option<&mut Table> {
         if !self.is_present() {
             return None;

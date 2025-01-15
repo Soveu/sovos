@@ -2,7 +2,6 @@
 
 #![feature(maybe_uninit_uninit_array)]
 #![feature(maybe_uninit_slice)]
-#![feature(const_maybe_uninit_uninit_array)]
 
 use core::mem::MaybeUninit;
 

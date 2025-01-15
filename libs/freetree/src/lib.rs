@@ -1,8 +1,6 @@
 #![no_std]
 #![allow(unused_parens)]
 #![feature(slice_ptr_get)]
-#![feature(exposed_provenance)]
-#![feature(strict_provenance)]
 
 //! Family of allocators inspired by freelists and based on a [B-Tree].
 //!

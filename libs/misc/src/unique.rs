@@ -44,7 +44,7 @@ impl<T: ?Sized> Unique<T> {
     /// * `p` has to be a valid pointer.
     /// * `p` also has to be unique.
     pub unsafe fn from_raw(p: *mut T) -> Self {
-        Self(NonNull::new_unchecked(p))
+        Self(NonNull::new(p).unwrap())
     }
 
     /// Consumes the `Unique`, returning a raw pointer.

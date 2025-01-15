@@ -2,9 +2,6 @@
 #![no_main]
 
 #![allow(unused_parens)]
-#![feature(asm_const)]
-#![feature(exposed_provenance)]
-#![feature(strict_provenance)]
 #![feature(naked_functions)]
 
 use uefi;

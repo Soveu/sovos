@@ -4,7 +4,7 @@
 #![feature(naked_functions)]
 #![feature(extern_types)]
 
-use core::arch::asm;
+use core::arch::{asm, naked_asm};
 
 #[panic_handler]
 fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
@@ -17,7 +17,7 @@ static mut MUT: [u8; 11] = *b"This is MUT";
 #[no_mangle]
 #[naked]
 pub unsafe extern "sysv64" fn _start() -> ! {
-    asm!("
+    naked_asm!("
     42:
         hlt
         jmp 42b
@@ -59,7 +59,6 @@ pub unsafe extern "sysv64" fn _start() -> ! {
         lea rax, [rip + .text]
         ",
         sym kmain,
-        options(noreturn),
     )
 }
 

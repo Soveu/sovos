@@ -1,4 +1,3 @@
-#![feature(exposed_provenance)]
-#![feature(strict_provenance)]
+#![no_std]
 
 pub mod unique;

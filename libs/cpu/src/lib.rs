@@ -2,8 +2,6 @@
 #![feature(abi_x86_interrupt)]
 #![feature(decl_macro)]
 #![feature(naked_functions)]
-#![feature(strict_provenance)]
-#![feature(exposed_provenance)]
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
 
