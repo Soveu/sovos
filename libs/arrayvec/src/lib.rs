@@ -1,6 +1,5 @@
 #![no_std]
 
-#![feature(maybe_uninit_uninit_array)]
 #![feature(maybe_uninit_slice)]
 
 use core::mem::MaybeUninit;
@@ -18,10 +17,8 @@ pub struct ArrayVecSized<T, const N: usize> {
 
 impl<T, const N: usize> ArrayVecSized<T, N> {
     pub const fn new() -> Self {
-        let inner = Inner::<[MaybeUninit<T>; N]>{
-            len: 0,
-            arr: MaybeUninit::uninit_array(),
-        };
+        let arr = [const { MaybeUninit::<T>::uninit() }; N];
+        let inner = Inner::<[MaybeUninit<T>; N]>{len: 0, arr };
         Self { inner }
     }
 
@@ -113,7 +110,7 @@ impl<T> ArrayVec<T> {
         // SAFETY: len <= capacity
         let s = unsafe { self.inner.arr.get_unchecked(..len) };
         // SAFETY: slice is initialized [0..len)
-        return unsafe { MaybeUninit::slice_assume_init_ref(s) };
+        return unsafe { s.assume_init_ref() };
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [T] {
@@ -121,7 +118,7 @@ impl<T> ArrayVec<T> {
         // SAFETY: len <= capacity
         let s = unsafe { self.inner.arr.get_unchecked_mut(..len) };
         // SAFETY: slice is initialized [0..len)
-        return unsafe { MaybeUninit::slice_assume_init_mut(s) };
+        return unsafe { s.assume_init_mut() };
     }
 
     pub fn push(&mut self, item: T) {
