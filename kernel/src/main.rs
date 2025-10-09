@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-#![feature(naked_functions)]
 #![feature(extern_types)]
 
 use core::arch::{asm, naked_asm};
@@ -15,7 +14,7 @@ static STR: [u8; 12] = *b"Hello World!";
 static mut MUT: [u8; 11] = *b"This is MUT";
 
 #[no_mangle]
-#[naked]
+#[unsafe(naked)]
 pub unsafe extern "sysv64" fn _start() -> ! {
     naked_asm!("
     42:

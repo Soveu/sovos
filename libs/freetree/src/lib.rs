@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(unused_parens)]
+#![allow(dangerous_implicit_autorefs)] // FIXME
 #![feature(slice_ptr_get)]
 
 //! Family of allocators inspired by freelists and based on a [B-Tree].

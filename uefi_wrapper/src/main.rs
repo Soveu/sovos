@@ -2,7 +2,6 @@
 #![no_main]
 
 #![allow(unused_parens)]
-#![feature(naked_functions)]
 
 use uefi;
 use fb;

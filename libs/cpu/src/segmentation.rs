@@ -98,7 +98,7 @@ impl Gdtr {
         Self { base: table, limit }
     }
 
-    #[naked]
+    #[unsafe(naked)]
     pub unsafe extern "sysv64" fn apply(&self) {
         naked_asm!("
             lgdt [rdi]

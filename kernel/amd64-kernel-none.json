@@ -1,6 +1,6 @@
 {
   "llvm-target": "x86_64-unknown-none-elf",
-  "target-pointer-width": "64",
+  "target-pointer-width": 64,
   "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
   "arch": "x86_64",
 
@@ -15,7 +15,7 @@
   "target-endian": "little",
   "max-atomic-width": 64,
   "atomic-cas": true,
-  "target-c-int-width": "32",
+  "target-c-int-width": 32,
   "c-enum-min-bits": 8,
 
   "singlethread": false,
@@ -51,7 +51,7 @@
   "emit-debug-gdb-scripts": true,
   "supported-sanitizers": [],
   "entry-name": "_start",
-  "entry-abi": "X86_64SysV",
+  "entry-abi": "sysv64",
   "supports-xray": false,
 
   "linker": "rust-lld",
@@ -61,7 +61,7 @@
   "pre-link-objects-fallback": {},
   "post-link-objects": {},
   "post-link-args": {},
-  "crt-objects-fallback": {},
+  "crt-objects-fallback": "false",
   "late-link-args": {},
   "late-link-args-dynamic": {},
   "late-link-args-static": {},

@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(decl_macro)]
-#![feature(naked_functions)]
 #![allow(unused_parens)]
 #![allow(unused_unsafe)]
 
