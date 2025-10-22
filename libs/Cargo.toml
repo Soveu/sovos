@@ -12,6 +12,7 @@ members = [
   "cereal",
   "fb",
   "misc",
+  "micromacro",
 ]
 
 [profile.release]

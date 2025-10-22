@@ -66,6 +66,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "micromacro"
+version = "0.1.0"
+
+[[package]]
 name = "misc"
 version = "0.1.0"
 
