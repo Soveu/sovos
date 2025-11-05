@@ -1,0 +1,13 @@
+[package]
+name = "__micromacro_testing"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+micromacro = { path = "../micromacro", version = "*" }
+
+[lints]
+workspace = true

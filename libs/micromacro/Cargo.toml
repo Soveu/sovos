@@ -3,6 +3,9 @@ name = "micromacro"
 version = "0.1.0"
 edition = "2024"
 
+[dev-dependencies]
+__micromacro_testing = { path = "../__micromacro_testing", version = "*" }
+
 [dependencies]
 
 [lints]

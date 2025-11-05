@@ -13,6 +13,7 @@ members = [
   "fb",
   "misc",
   "micromacro",
+  "__micromacro_testing",
 ]
 
 [profile.release]

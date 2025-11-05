@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "__micromacro_testing"
+version = "0.1.0"
+dependencies = [
+ "micromacro",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.1.0"
 
@@ -68,6 +75,9 @@ dependencies = [
 [[package]]
 name = "micromacro"
 version = "0.1.0"
+dependencies = [
+ "__micromacro_testing",
+]
 
 [[package]]
 name = "misc"
