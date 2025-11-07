@@ -1,4 +1,4 @@
-use proc_macro::{TokenStream, TokenTree, Group, Delimiter, Ident, Span, Punct, Spacing, Literal};
+use proc_macro::{TokenStream, TokenTree, Ident, Span};
 use crate::generating::{ToLiteral, Generator};
 
 pub struct TokenSink(TokenStream);
