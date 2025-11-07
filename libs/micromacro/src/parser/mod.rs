@@ -160,7 +160,128 @@ fn any_ident() -> impl for<'src> Parser<'src, Output = proc_macro::Ident> + Clon
     return parsing::any().try_map(f);
 }
 
-pub fn parser() -> impl for<'src> Parser<'src, Output = Type> {
+#[derive(Clone, Debug)]
+pub enum UnaryOp {
+    Star,
+    Minus,
+    And,
+    Try,
+    Neg,
+}
+
+#[derive(Clone, Debug)]
+pub enum BinaryOp {
+    Add { assign: bool },
+    Sub { assign: bool },
+    Mul { assign: bool },
+    Div { assign: bool },
+    Mod { assign: bool },
+    Xor { assign: bool },
+
+    BitAnd { assign: bool },
+    BitOr { assign: bool },
+    BitShiftLeft { assign: bool },
+    BitShiftRight { assign: bool },
+
+    Eq,
+    NotEq,
+    Gt,
+    Lt,
+    Ge,
+    Le,
+
+    BoolAnd,
+    BoolOr,
+
+    Assign,
+}
+
+#[derive(Clone, Debug)]
+pub struct Todo;
+
+#[derive(Clone, Debug)]
+pub enum Expr {
+    Literal(proc_macro::Literal),
+    Ident(proc_macro::Ident),
+
+    Path(Todo),
+    Underscore,
+
+    IfElse { condition: proc_macro::Group, if_block: proc_macro::Group, else_block: proc_macro::Group },
+    Loop(proc_macro::Group),
+    Match { value: Box<Expr>, match_block: proc_macro::Group },
+
+    BinaryOp { op: BinaryOp, lhs: Box<Expr>, rhs: Box<Expr> },
+    UnaryOp { op: UnaryOp, item: Box<Expr> },
+    As { expr: Box<Expr>, typ: Todo },
+    Paren(Box<Expr>),
+    Range(Todo),
+
+    Array(Vec<Expr>),
+    ArraySub { arr: Box<Expr>, index: Box<Expr> },
+
+    Tuple(Vec<Expr>),
+    TupleSub { tup: Box<Expr>, index: Todo },
+
+    Struct { path: Todo, fields: Vec<(Option<proc_macro::Ident>, Expr)>, update: Option<Box<Expr>> },
+    TupleStruct { path: Todo, fields: Vec<Expr> },
+
+    Call { fun: Box<Expr>, args: Vec<Expr> },
+    MethodCall { obj: Box<Expr>, method: proc_macro::Ident, args: Vec<Expr> },
+    Field { obj: Box<Expr>, field: proc_macro::Ident },
+}
+
+pub fn expr_parser() -> impl for<'src> Parser<'src, Output = Expr> {
+    parsing::End.map(|_| -> Expr { todo!() })
+}
+
+
+#[derive(Clone, Debug)]
+pub enum PrimitiveType {
+    Bool,
+    Never,
+    Char,
+    Str,
+
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
+    Uint128,
+
+    Float16,
+    Float32,
+    Float64,
+    Float128,
+}
+
+#[derive(Clone, Debug)]
+pub enum _Type {
+    Primitive(PrimitiveType),
+    Path(Todo),
+    Impl(Todo),
+    Dyn(Todo),
+
+    Reference { is_mut: bool, lifetime: Todo, typ: Box<_Type> },
+    Pointer { is_mut: bool, typ: Box<_Type> },
+
+    Tuple(Vec<_Type>),
+    Slice(Box<_Type>),
+    Array { typ: Box<_Type>, size: Box<Expr> },
+    Function { args: Vec<_Type>, ret: Box<_Type> },
+}
+
+pub fn type_parser() -> impl for<'src> Parser<'src, Output = _Type> {
+    parsing::End.map(|_| -> _Type { todo!() })
+}
+
+pub fn derive_parser() -> impl for<'src> Parser<'src, Output = Type> {
     let repr = punct('#')
         .then(parsing::InGroup(
             ident("repr")
