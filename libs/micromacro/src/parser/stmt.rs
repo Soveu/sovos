@@ -1,4 +1,4 @@
-use crate::parsing::{self, Parser, ParseError};
+use crate::parsing::{self, Parser, ParseError, iter_parser::IterParser};
 use crate::parser::{ident, any_ident};
 use proc_macro::TokenTree;
 
@@ -89,7 +89,8 @@ impl Repr {
         let repr = typ.or(int);
 
         repr
-            .repeated_fold(Self::merge)
+            .clone()
+            .try_fold_left(repr.repeated(), Self::merge)
             .map(|seif| Repr { typ: Some(seif.typ.unwrap_or(ReprType::Rust)), ..seif })
     }
 }
@@ -166,7 +167,7 @@ pub fn derive_parser() -> impl for<'src> Parser<'src, Output = Type> {
         .then(punct(','))
         .map(|((((is_pub, name), _), typ), _)| Field { is_pub, name, typ });
 
-    let fields = parsing::InGroup(field.repeated().then(parsing::End));
+    let fields = parsing::InGroup(field.repeated().collect_vec().then(parsing::End));
 
     repr
         .then(decl)

@@ -55,49 +55,6 @@ where
 }
 
 #[derive(Clone)]
-pub struct Repeated<P>(pub P);
-
-impl<'src, P: Parser<'src>> Parser<'src> for Repeated<P> {
-    type Output = Vec<P::Output>;
-    fn parse(&self, mut input: Input<'src>) -> ParseResult<'src, Self::Output> {
-        let mut v = Vec::new();
-
-        while let Ok((i, o)) = (self.0).parse(input) {
-            input = i;
-            v.push(o);
-        }
-
-        return Ok((input, v));
-    }
-}
-
-#[derive(Clone)]
-pub struct RepeatedFold<P, F, U> {
-    pub parser: P,
-    pub folder: F,
-    pub phantom: PhantomData<U>,
-}
-
-impl<'src, P, F, U> Parser<'src> for RepeatedFold<P, F, U>
-where
-    P: Parser<'src>,
-    F: Fn(U, P::Output) -> Result<U, ParseError>,
-    U: Default,
-{
-    type Output = U;
-    fn parse(&self, mut input: Input<'src>) -> ParseResult<'src, Self::Output> {
-        let mut u = U::default();
-
-        while let Ok((i, o)) = self.parser.parse(input) {
-            input = i;
-            u = (self.folder)(u, o)?;
-        }
-
-        return Ok((input, u));
-    }
-}
-
-#[derive(Clone)]
 pub struct Then<P1, P2>(pub P1, pub P2);
 
 impl<'src, P1, P2> Parser<'src> for Then<P1, P2>

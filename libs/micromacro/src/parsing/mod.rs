@@ -1,5 +1,6 @@
 mod adapters;
 mod parse_error;
+pub mod iter_parser;
 pub use parse_error::ParseError;
 pub use adapters::*;
 
@@ -42,23 +43,36 @@ pub trait Parser<'src> {
         }
     }
 
-    fn repeated(self) -> Repeated<Self>
+    fn repeated(self) -> iter_parser::Repeated<Self>
     where
         Self: Sized,
     {
-        Repeated(self)
+        iter_parser::Repeated {
+            parser: self,
+            at_least: 0,
+            at_most: u32::MAX,
+        }
     }
 
-    fn repeated_fold<F, U>(self, f: F) -> RepeatedFold<Self, F, U>
+    fn fold_left<I, F>(self, i: I, f: F) -> iter_parser::FoldLeft<I, Self, F>
     where
         Self: Sized,
-        F: Fn(U, Self::Output) -> Result<U, ParseError>,
-        U: Default,
     {
-        RepeatedFold {
-            parser: self,
+        iter_parser::FoldLeft {
+            single_parser: self,
+            iter_parser: i,
             folder: f,
-            phantom: PhantomData,
+        }
+    }
+
+    fn try_fold_left<I, F>(self, i: I, f: F) -> iter_parser::TryFoldLeft<I, Self, F>
+    where
+        Self: Sized,
+    {
+        iter_parser::TryFoldLeft {
+            single_parser: self,
+            iter_parser: i,
+            folder: f,
         }
     }
 
